@@ -1,7 +1,10 @@
 # imports from flask
-from flask import redirect, render_template, request, url_for  # import render_template from "public" flask libraries
+from flask import redirect, render_template, request, url_for, jsonify  # import render_template from "public" flask libraries
 from flask_login import current_user, login_user, logout_user
 from flask.cli import AppGroup
+import jwt 
+from flask_login import current_user, login_required
+from flask import current_app
 
 # import "objects" from "this" project
 from __init__ import app, db, login_manager  # Key Flask objects 
@@ -13,16 +16,13 @@ from api.user import user_api
 from api.player import player_api
 from api.titanic import titanic_api
 # database Initialization functions
-from model.users import User, initUsers 
+from model.users import User, initUsers , Classes
 from model.players import initPlayers
 from model.titanicML import initTitanic
 # server only Views
 from views.algorithm.algorithm import algorithm_views 
 from views.recipes.recipe import recipe_views 
 from views.projects.projects import project_views
-
-# Initialize the SQLAlchemy object to work with the Flask app instance
-db.init_app(app)
 
 # register URIs for api endpoints
 app.register_blueprint(joke_api) 
@@ -67,15 +67,129 @@ def login():
     user = User.query.filter_by(_uid=request.form['username']).first()
     if user and user.is_password(request.form['password']):
         login_user(user)
+        
+        # Generate JWT token
+        token = jwt.encode(
+            {"_uid": user._uid},
+            current_app.config["SECRET_KEY"],
+            algorithm="HS256"
+        )
+        
+        # Create a response and set the token as a cookie
+        resp = redirect(url_for('index'))
+        resp.set_cookie(current_app.config["JWT_TOKEN_NAME"], 
+                        token,
+                        max_age=3600,
+                        secure=True,
+                        httponly=True,
+                        path='/',
+                        samesite='None')
+        
         print("Logged in:", current_user)
-        return redirect(url_for('index'))
+        print("Token:", token)
+        
+        return resp
     else:
         return 'Invalid username or password'
+
     
 @app.route('/logout')
 def logout():
     logout_user()
     return redirect(url_for('index'))
+
+@app.route('/users/table')
+@login_required
+def utable():
+    users = User.query.all()
+
+    user_data = []
+    for user in users:
+        user_dict = {
+            "id": user.id,
+            "name": user.name,
+            "uid": user.uid,
+            "role": user.role,
+            "kasm_server_needed": user.kasm_server_needed,
+            "status": user.status,
+            "classes": []
+        }
+
+        if user.classes:
+            if user.classes.csp:
+                user_dict["classes"].append("csp")
+            if user.classes.csa:
+                user_dict["classes"].append("csa")
+            if user.classes.robotics:
+                user_dict["classes"].append("robotics")
+            if user.classes.animation:
+                user_dict["classes"].append("animation")
+
+        user_data.append(user_dict)
+
+    return render_template("utable.html", user_data=user_data, current_user=current_user)
+
+@app.route('/users/edit/<int:user_id>', methods=['POST'])
+@login_required
+def edit_user(user_id):
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    data = request.get_json()
+    user.kasm_server_needed = data.get('kasmServerNeeded', user.kasm_server_needed)
+    user.status = data.get('status', user.status)
+
+    class_data = data.get('classes', {})
+    if user.classes:
+        user.classes.csp = class_data.get('csp', user.classes.csp)
+        user.classes.csa = class_data.get('csa', user.classes.csa)
+        user.classes.robotics = class_data.get('robotics', user.classes.robotics)
+        user.classes.animation = class_data.get('animation', user.classes.animation)
+    else:
+        user.classes = Classes(
+            user_id=user.id,
+            csp=class_data.get('csp', False),
+            csa=class_data.get('csa', False),
+            robotics=class_data.get('robotics', False),
+            animation=class_data.get('animation', False)
+        )
+
+    db.session.commit()
+
+    return jsonify({
+        'kasmServerNeeded': user.kasm_server_needed,
+        'status': user.status,
+        'classes': user.classes.read() if user.classes else None
+    })
+
+
+@app.route('/users/delete/<int:user_id>', methods=['DELETE'])
+@login_required
+def delete_user(user_id):
+    user = User.query.get(user_id)
+    if user:
+        db.session.delete(user)
+        db.session.commit()
+        return jsonify({'message': 'User deleted successfully'}), 200
+    return jsonify({'error': 'User not found'}), 404
+
+
+@app.route('/classes')
+@login_required
+def get_classes():
+    classes = Classes.query.all()
+    return jsonify([{'id': c.id, 'name': c.name} for c in classes])
+
+@app.route('/users/<int:user_id>/classes')
+@login_required
+def get_user_classes(user_id):
+    user = User.query.get(user_id)
+    if user and user.classes:
+        return jsonify(user.classes.read())
+    return jsonify({}), 404
+
+
 
 # Create an AppGroup for custom commands
 custom_cli = AppGroup('custom', help='Custom commands')

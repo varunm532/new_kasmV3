@@ -16,7 +16,7 @@ class UserAPI:
     class _ID(Resource):  # Individual identification API operation
         @token_required()
         def get(self):
-            ''' Retrieve the current user from the token_required authenication check '''
+            ''' Retrieve the current user from the token_required authentication check '''
             current_user = g.current_user
             ''' Return the current user as a json object '''
             return jsonify(current_user.read())
@@ -65,7 +65,7 @@ class UserAPI:
 
         @token_required()
         def get(self):
-            # retrieve the current user from the token_required authenication check  
+            # retrieve the current user from the token_required authentication check  
             current_user = g.current_user
             # current_user extracted from the token using token_required decorator
             users = User.query.all() # extract all users from the database
@@ -85,7 +85,7 @@ class UserAPI:
         
         @token_required() 
         def put(self):  # Update method
-            # retrieve the current user from the token_required authenication check  
+            # retrieve the current user from the token_required authentication check  
             current_user = g.current_user
             
             ''' Read data for json body '''
@@ -121,8 +121,8 @@ class UserAPI:
                 user.name = name
                 
             uid = body.get('uid')
-            if uid is not None and uid != '':  
-                user.uid = uid
+            if uid is not None and uid != '':
+                            user.uid = uid
                 
             dob = body.get('dob')   
             if dob is not None and dob != '':
@@ -143,7 +143,7 @@ class UserAPI:
         def delete(self): # Delete Method
             body = request.get_json()
             uid = body.get('uid')
-            user = User.query.filter_by(_uid=uid).first()
+            user = User.query.filter_by(uid=uid).first()
             if user is None:
                 return {'message': f'User {uid} not found'}, 404
             json = user.read()
@@ -166,17 +166,25 @@ class UserAPI:
                 if uid is None:
                     return {'message': f'User ID is missing'}, 401
                 password = body.get('password')
-                
+                if not password:
+                    return {'message': f'Password is missing'}, 401
+                            
                 ''' Find user '''
+    
                 user = User.query.filter_by(_uid=uid).first()
+                
                 if user is None or not user.is_password(password):
+                    
                     return {'message': f"Invalid user id or password"}, 401
+                            
+                            # Check if user is found
                 if user:
                     try:
                         token = jwt.encode(
-                            {"_uid": user._uid},
-                            current_app.config["SECRET_KEY"],
-                            algorithm="HS256"
+                       {"_uid": user._uid},
+              #          {"role": user._role},
+                        current_app.config["SECRET_KEY"],
+                        algorithm="HS256"
                         )
                         resp = Response("Authentication for %s successful" % (user._uid))
                         resp.set_cookie(current_app.config["JWT_TOKEN_NAME"], 
@@ -187,29 +195,28 @@ class UserAPI:
                                 path='/',
                                 samesite='None'  # This is the key part for cross-site requests
 
-                                # domain="frontend.com"
-                                )
-                        return resp
+                                            # domain="frontend.com"
+                         )
+                        print(token)
+                        return resp 
                     except Exception as e:
                         return {
-                            "error": "Something went wrong",
-                            "message": str(e)
-                        }, 500
+                                        "error": "Something went wrong",
+                                        "message": str(e)
+                                    }, 500
                 return {
-                    "message": "Error fetching auth token!",
-                    "data": None,
-                    "error": "Unauthorized"
-                }, 404
+                                "message": "Error fetching auth token!",
+                                "data": None,
+                                "error": "Unauthorized"
+                            }, 404
             except Exception as e:
-                return {
-                        "message": "Something went wrong!",
-                        "error": str(e),
-                        "data": None
-                }, 500
+                 return {
+                                    "message": "Something went wrong!",
+                                    "error": str(e),
+                                    "data": None
+                            }, 500
 
-            
     # building RESTapi endpoint
     api.add_resource(_ID, '/id')
     api.add_resource(_CRUD, '/users')
-    api.add_resource(_Security, '/authenticate')
-    
+    api.add_resource(_Security, '/authenticate')          
