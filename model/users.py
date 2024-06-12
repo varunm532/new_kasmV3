@@ -13,27 +13,28 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 ''' Tutorial: https://www.sqlalchemy.org/library.html#tutorials, try to get into Python shell and follow along '''
 
-# Define the Post class to manage actions in 'posts' table,  with a relationship to 'users' table
-class Classes(db.Model):
-    __tablename__ = 'classes'
+user_sections = db.Table('user_sections',
+    db.Column('user_id', db.Integer, db.ForeignKey('users.id'), primary_key=True),
+    db.Column('section_id', db.Integer, db.ForeignKey('sections.id'), primary_key=True)
+)
 
-    id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
-    csp = db.Column(db.Boolean, default=False)
-    csa = db.Column(db.Boolean, default=False)
-    robotics = db.Column(db.Boolean, default=False)
-    animation = db.Column(db.Boolean, default=False)
+# Define a many-to-many relationship to 'users' table
+class Section(db.Model):
+    __tablename__ = 'sections'
+
+    id = db.Column(db.Integer, primary_key=True)
+    _name = db.Column(db.String(255), unique=False, nullable=False)
+    _abbreviation = db.Column(db.String(255), nullable=False)
+    users = db.relationship('User', secondary=user_sections, backref=db.backref('sections', lazy='dynamic'))
 
     # Constructor
-    def __init__(self, user_id, csp=False, csa=False, robotics=False, animation=False):
-        self.id = user_id
-        self.csp = csp
-        self.csa = csa
-        self.robotics = robotics
-        self.animation = animation
+    def __init__(self, name, abbreviation):
+        self._name = name 
+        self._abbreviation = abbreviation
 
     # String representation of the Classes object
     def __repr__(self):
-        return f"Classes(user_id={self.id}, csp={self.csp}, csa={self.csa}, robotics={self.robotics}, animation={self.animation})"
+        return f"Class(_id={self.id}, name={self._name}, abbreviation={self._abbreviation})"
 
     # CRUD create
     def create(self):
@@ -49,10 +50,8 @@ class Classes(db.Model):
     def read(self):
         return {
             "id": self.id,
-            "csp": self.csp,
-            "csa": self.csa,
-            "robotics": self.robotics,
-            "animation": self.animation
+            "name": self._name,
+            "abbreviation": self._abbreviation
         }
 
 
@@ -73,9 +72,10 @@ class User(db.Model, UserMixin):
     _role = db.Column(db.String(20), default="User", nullable=False)
     kasm_server_needed = db.Column(db.Boolean, default=False)
     status = db.Column(db.Boolean, default=True)
-
-    # Defines a one-to-one relationship with Classes table
-    classes = db.relationship("Classes", uselist=False, backref="user", cascade="all, delete")
+    
+    # Relationship to manage the association between users and sections
+    sections = db.relationship('Section', secondary=user_sections, lazy='subquery',
+                               backref=db.backref('users', lazy=True))
 
     # Constructor of a User object, initializes the instance variables within object (self)
     def __init__(self, name, uid, password="123qwerty", kasm_server_needed=False, status=True, role="User"):
@@ -207,9 +207,22 @@ class User(db.Model, UserMixin):
         db.session.delete(self)
         db.session.commit()
         return None
+    
+    def add_section(self, abbreviation):
+        # Query for the section using the provided abbreviation
+        section = Section.query.filter_by(_abbreviation=abbreviation).first()
+        
+        # Check if the section was found
+        if section:
+            # Add the section to the user's sections
+            self.sections.append(section)
+            # Commit the changes to the database
+            db.session.commit()
+        else:
+            # Handle the case where the section does not exist
+            print("Section with abbreviation '{}' not found.".format(abbreviation))
 
 """Database Creation and Testing """
-
 
 # Builds working data for testing
 def initUsers():
@@ -223,12 +236,14 @@ def initUsers():
         u4 = User(name='Grace Hopper', uid='hop', password='123hop', kasm_server_needed=False, status=True)
         users = [u1, u2, u3, u4]
 
-        """Builds sample user/classes data"""
+        c1 = Section(name='Computer Science A', abbreviation='CSA')
+        c2 = Section(name='Computer Science Principles', abbreviation='CSP')
+        c3 = Section(name='Engineering Robotics', abbreviation='Robotics')
+        c4 = Section(name='Computer Science and Software Engineering', abbreviation='CSSE')
+        sections = [c1, c2, c3, c4]
+        
         for user in users:
-            try:
-                user.create()
-                classes = Classes(user_id=user.id, csp=True, csa=False, robotics=True, animation=False)
-                classes.create()
-            except IntegrityError:
-                db.session.rollback()
-                print(f"Records exist, duplicate uid, or error: {user.uid}")
+            user.create()
+        for section in sections:
+            section.create()
+            

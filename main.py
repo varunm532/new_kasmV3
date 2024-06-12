@@ -16,7 +16,7 @@ from api.user import user_api
 from api.player import player_api
 from api.titanic import titanic_api
 # database Initialization functions
-from model.users import User, initUsers , Classes
+from model.users import User, initUsers, Section 
 from model.players import initPlayers
 from model.titanicML import initTitanic
 # server only Views
@@ -112,20 +112,8 @@ def utable():
             "role": user.role,
             "kasm_server_needed": user.kasm_server_needed,
             "status": user.status,
-            "classes": []
+            "classes": user.sections
         }
-
-        if user.classes:
-            if user.classes.csp:
-                user_dict["classes"].append("csp")
-            if user.classes.csa:
-                user_dict["classes"].append("csa")
-            if user.classes.robotics:
-                user_dict["classes"].append("robotics")
-            if user.classes.animation:
-                user_dict["classes"].append("animation")
-
-        user_data.append(user_dict)
 
     return render_template("utable.html", user_data=user_data, current_user=current_user)
 
@@ -140,27 +128,11 @@ def edit_user(user_id):
     user.kasm_server_needed = data.get('kasmServerNeeded', user.kasm_server_needed)
     user.status = data.get('status', user.status)
 
-    class_data = data.get('classes', {})
-    if user.classes:
-        user.classes.csp = class_data.get('csp', user.classes.csp)
-        user.classes.csa = class_data.get('csa', user.classes.csa)
-        user.classes.robotics = class_data.get('robotics', user.classes.robotics)
-        user.classes.animation = class_data.get('animation', user.classes.animation)
-    else:
-        user.classes = Classes(
-            user_id=user.id,
-            csp=class_data.get('csp', False),
-            csa=class_data.get('csa', False),
-            robotics=class_data.get('robotics', False),
-            animation=class_data.get('animation', False)
-        )
-
     db.session.commit()
 
     return jsonify({
         'kasmServerNeeded': user.kasm_server_needed,
         'status': user.status,
-        'classes': user.classes.read() if user.classes else None
     })
 
 
@@ -173,21 +145,6 @@ def delete_user(user_id):
         db.session.commit()
         return jsonify({'message': 'User deleted successfully'}), 200
     return jsonify({'error': 'User not found'}), 404
-
-
-@app.route('/classes')
-@login_required
-def get_classes():
-    classes = Classes.query.all()
-    return jsonify([{'id': c.id, 'name': c.name} for c in classes])
-
-@app.route('/users/<int:user_id>/classes')
-@login_required
-def get_user_classes(user_id):
-    user = User.query.get(user_id)
-    if user and user.classes:
-        return jsonify(user.classes.read())
-    return jsonify({}), 404
 
 
 
