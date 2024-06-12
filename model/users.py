@@ -24,9 +24,8 @@ class Section(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     _name = db.Column(db.String(255), unique=False, nullable=False)
-    _abbreviation = db.Column(db.String(255), nullable=False)
-    users = db.relationship('User', secondary=user_sections, backref=db.backref('sections', lazy='dynamic'))
-
+    _abbreviation = db.Column(db.String(255), unique=True, nullable=False)
+    
     # Constructor
     def __init__(self, name, abbreviation):
         self._name = name 
@@ -208,19 +207,20 @@ class User(db.Model, UserMixin):
         db.session.commit()
         return None
     
-    def add_section(self, abbreviation):
+    def add_section(self, section):
         # Query for the section using the provided abbreviation
-        section = Section.query.filter_by(_abbreviation=abbreviation).first()
+        found = any(s.id == section.id for s in self.sections)
         
         # Check if the section was found
-        if section:
+        if not found:
             # Add the section to the user's sections
             self.sections.append(section)
             # Commit the changes to the database
             db.session.commit()
         else:
             # Handle the case where the section does not exist
-            print("Section with abbreviation '{}' not found.".format(abbreviation))
+            print("Section with abbreviation '{}' exists.".format(section._abbreviation))
+        return self
 
 """Database Creation and Testing """
 
@@ -230,20 +230,40 @@ def initUsers():
         """Create database and tables"""
         db.create_all()
         """Tester data for table"""
+        
         u1 = User(name='Thomas Edison', uid='toby', password='123toby', kasm_server_needed=True, status=True, role="Admin")
         u2 = User(name='Nicholas Tesla', uid='niko', password='123niko', kasm_server_needed=False, status=True)
         u3 = User(name='Alexander Graham Bell', uid='lex', kasm_server_needed=True, status=True)
         u4 = User(name='Grace Hopper', uid='hop', password='123hop', kasm_server_needed=False, status=True)
         users = [u1, u2, u3, u4]
-
-        c1 = Section(name='Computer Science A', abbreviation='CSA')
-        c2 = Section(name='Computer Science Principles', abbreviation='CSP')
-        c3 = Section(name='Engineering Robotics', abbreviation='Robotics')
-        c4 = Section(name='Computer Science and Software Engineering', abbreviation='CSSE')
-        sections = [c1, c2, c3, c4]
         
         for user in users:
-            user.create()
+            try:
+                user.create()
+            except IntegrityError:
+                '''fails with bad or duplicate data'''
+                db.session.remove()
+                print(f"Records exist, duplicate email, or error: {user.uid}")
+
+        s1 = Section(name='Computer Science A', abbreviation='CSA')
+        s2 = Section(name='Computer Science Principles', abbreviation='CSP')
+        s3 = Section(name='Engineering Robotics', abbreviation='Robotics')
+        s4 = Section(name='Computer Science and Software Engineering', abbreviation='CSSE')
+        sections = [s1, s2, s3, s4]
+        
         for section in sections:
-            section.create()
+            try:
+                section.create()    
+            except IntegrityError:
+                '''fails with bad or duplicate data'''
+                db.session.remove()
+                print(f"Records exist, duplicate email, or error: {section.name}")
             
+        u1.add_section(s1)
+        u1.add_section(s2)
+        u2.add_section(s2)
+        u2.add_section(s3)
+        u3.add_section(s3)
+        u4.add_section(s4)
+        u4.add_section(s4)
+        
