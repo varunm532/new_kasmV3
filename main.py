@@ -10,31 +10,15 @@ from flask import current_app
 from __init__ import app, db, login_manager  # Key Flask objects 
 
 # API endpoints
-from api.covid import covid_api 
-from api.joke import joke_api 
 from api.user import user_api 
-from api.player import player_api
-from api.titanic import titanic_api
 # database Initialization functions
 from model.users import User, initUsers, Section 
-from model.players import initPlayers
-from model.titanicML import initTitanic
 # server only Views
-from views.algorithm.algorithm import algorithm_views 
-from views.recipes.recipe import recipe_views 
-from views.projects.projects import project_views
+
 
 # register URIs for api endpoints
-app.register_blueprint(joke_api) 
-app.register_blueprint(covid_api) 
 app.register_blueprint(user_api) 
-app.register_blueprint(player_api)
-app.register_blueprint(titanic_api)
 # register URIs for server pages
-app.register_blueprint(algorithm_views) 
-app.register_blueprint(recipe_views) 
-app.register_blueprint(project_views) 
-
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
@@ -52,10 +36,6 @@ def page_not_found(e):
 def index():
     print("Home:", current_user)
     return render_template("index.html")
-
-@app.route('/table/')  # connects /table/ URL
-def table():
-    return render_template("table.html")
 
 @app.route('/login/')  # connects /table/ URL
 def login_page():

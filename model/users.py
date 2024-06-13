@@ -180,7 +180,7 @@ class User(db.Model, UserMixin):
             "role": self._role,
             "kasm_server_needed": self.kasm_server_needed,
             "status": self.status,
-            "classes": self.classes.read() if self.classes else None
+            "sections": [section.read() for section in self.sections] if self.sections else None
         }
 
     # CRUD update: updates user name, password, phone
