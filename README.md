@@ -14,8 +14,8 @@
 
 Use this project to create a Flask Server.
 
-Runtime link: <https://flask.nighthawkcodingsociety.com/>
-GitHub link: https://github.com/nighthawkcoders/flask_portfolio
+Runtime link: not available
+GitHub link: https://github.com/nighthawkcoders/kasmv2_flask
 
 ## The conventional way to get started
 
@@ -26,9 +26,9 @@ GitHub link: https://github.com/nighthawkcoders/flask_portfolio
 ```bash
 mkdir ~/vscode; cd ~/vscode
 
-git clone https://github.com/nighthawkcoders/flask_portfolio.git
+git clone https://github.com/nighthawkcoders/kasmv2_flask.git
 
-cd flask_portfolio
+cd kasmv2_flask
 ```
 
 - Install python dependencies for Flask, etc.
