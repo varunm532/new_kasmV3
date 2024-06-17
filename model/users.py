@@ -30,6 +30,10 @@ class Section(db.Model):
     def __init__(self, name, abbreviation):
         self._name = name 
         self._abbreviation = abbreviation
+        
+    @property
+    def abbreviation(self):
+        return self._abbreviation
 
     # String representation of the Classes object
     def __repr__(self):

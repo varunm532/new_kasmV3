@@ -82,20 +82,7 @@ def logout():
 @login_required
 def utable():
     users = User.query.all()
-
-    user_data = []
-    for user in users:
-        user_dict = {
-            "id": user.id,
-            "name": user.name,
-            "uid": user.uid,
-            "role": user.role,
-            "kasm_server_needed": user.kasm_server_needed,
-            "status": user.status,
-            "classes": user.sections
-        }
-
-    return render_template("utable.html", user_data=user_data, current_user=current_user)
+    return render_template("utable.html", user_data=users)
 
 @app.route('/users/edit/<int:user_id>', methods=['POST'])
 @login_required

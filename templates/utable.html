@@ -34,7 +34,11 @@
                     <td>{{ user.role }}</td>
                     <td id="kasm-{{ user.id }}">{{ user.kasm_server_needed }}</td>
                     <td id="status-{{ user.id }}">{{ user.status }}</td>
-                    <td>{{ user.classes | join(', ') }}</td>
+                    <td>
+                        {% for section in user.sections %}
+                            {{ section.abbreviation }}{% if not loop.last %}, {% endif %}
+                        {% endfor %}
+                    </td>
                     {% if current_user.role == 'Admin' %}
                     <td>
                         <button class="btn btn-primary edit-btn" data-id="{{ user.id }}">Edit</button>
