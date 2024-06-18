@@ -73,6 +73,7 @@ class User(db.Model, UserMixin):
     _uid = db.Column(db.String(255), unique=True, nullable=False)
     _password = db.Column(db.String(255), unique=False, nullable=False)
     _role = db.Column(db.String(20), default="User", nullable=False)
+    _pfp = db.Column(db.String(255), unique=False, nullable=False)
     kasm_server_needed = db.Column(db.Boolean, default=False)
     status = db.Column(db.Boolean, default=True)
     
@@ -81,13 +82,14 @@ class User(db.Model, UserMixin):
                                backref=db.backref('users', lazy=True))
 
     # Constructor of a User object, initializes the instance variables within object (self)
-    def __init__(self, name, uid, password="123qwerty", kasm_server_needed=False, status=True, role="User"):
+    def __init__(self, name, uid, password="123qwerty", kasm_server_needed=False, status=True, role="User", pfp=''):
         self._name = name
         self._uid = uid
         self.set_password(password)
         self.kasm_server_needed = kasm_server_needed
         self.status = status
         self._role = role
+        self._pfp = pfp
 
     # UserMixin/Flask-Login require a get_id method to return the id as a string
     def get_id(self):
@@ -162,6 +164,16 @@ class User(db.Model, UserMixin):
 
     def is_admin(self):
         return self._role == "Admin"
+    
+    # getter method for profile picture
+    @property
+    def pfp(self):
+        return self._pfp
+
+    # setter function for profile picture
+    @pfp.setter
+    def pfp(self, pfp):
+        self._pfp = pfp
 
     # CRUD create/add a new record to the table
     # returns self or None on error
@@ -182,6 +194,7 @@ class User(db.Model, UserMixin):
             "name": self.name,
             "uid": self.uid,
             "role": self._role,
+            "pfp": self._pfp,
             "kasm_server_needed": self.kasm_server_needed,
             "status": self.status,
             "sections": [section.read() for section in self.sections] if self.sections else None
@@ -189,7 +202,7 @@ class User(db.Model, UserMixin):
 
     # CRUD update: updates user name, password, phone
     # returns self
-    def update(self, name="", uid="", password="", kasm_server_needed=None, status=None):
+    def update(self, name="", uid="", password="", pfp="", kasm_server_needed=None, status=None):
         """only updates values with length"""
         if len(name) > 0:
             self.name = name
@@ -197,6 +210,8 @@ class User(db.Model, UserMixin):
             self.uid = uid
         if len(password) > 0:
             self.set_password(password)
+        if len(pfp) > 0:
+            self.pfp = pfp
         if kasm_server_needed is not None:
             self.kasm_server_needed = kasm_server_needed
         if status is not None:
