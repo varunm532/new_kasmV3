@@ -18,35 +18,33 @@
                     <th>UID</th>
                     <th>Role</th>
                     <th>Kasm Server Needed</th>
-                    <th>Account Approved</th>
                     <th>Classes</th>
-                    {% if current_user.role == 'Admin' %}
                     <th>Actions</th>
-                    {% endif %}
                 </tr>
             </thead>
             <tbody>
-                {% for user in user_data %}
-                <tr>
-                    <td>{{ user.id }}</td>
-                    <td>{{ user.name }}</td>
-                    <td>{{ user.uid }}</td>
-                    <td>{{ user.role }}</td>
-                    <td id="kasm-{{ user.id }}">{{ user.kasm_server_needed }}</td>
-                    <td id="status-{{ user.id }}">{{ user.status }}</td>
-                    <td>
-                        {% for section in user.sections %}
-                            {{ section.abbreviation }}{% if not loop.last %}, {% endif %}
-                        {% endfor %}
-                    </td>
-                    {% if current_user.role == 'Admin' %}
-                    <td>
-                        <button class="btn btn-primary edit-btn" data-id="{{ user.id }}">Edit</button>
-                        <button class="btn btn-danger delete-btn" data-id="{{ user.id }}">Delete</button>
-                    </td>
-                    {% endif %}
-                </tr>
-                {% endfor %}
+            {% for user in user_data %}
+                {% if user.id == current_user.id or current_user.role == 'Admin' %}
+                    <tr>
+                        <td>{{ user.id }}</td>
+                        <td>{{ user.name }}</td>
+                        <td>{{ user.uid }}</td>
+                        <td>{{ user.role }}</td>
+                        <td id="kasm-{{ user.id }}">{{ user.kasm_server_needed }}</td>
+                        <td>
+                            {% for section in user.sections %}
+                                {{ section.abbreviation }}{% if not loop.last %}, {% endif %}
+                            {% endfor %}
+                        </td>
+                        <td>
+                            <button class="btn btn-primary edit-btn" data-id="{{ user.id }}">Edit</button>
+                            {% if current_user.role == 'Admin' %}
+                                <button class="btn btn-danger delete-btn" data-id="{{ user.id }}">Delete</button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endif %}
+            {% endfor %}
             </tbody>
         </table>
     </div>
