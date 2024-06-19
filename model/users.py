@@ -73,7 +73,7 @@ class User(db.Model, UserMixin):
     _uid = db.Column(db.String(255), unique=True, nullable=False)
     _password = db.Column(db.String(255), unique=False, nullable=False)
     _role = db.Column(db.String(20), default="User", nullable=False)
-    _pfp = db.Column(db.String(255), unique=False, nullable=False)
+    _pfp = db.Column(db.String(255), unique=False, nullable=True)
     kasm_server_needed = db.Column(db.Boolean, default=False)
     status = db.Column(db.Boolean, default=True)
     
@@ -250,10 +250,10 @@ def initUsers():
         db.create_all()
         """Tester data for table"""
         
-        u1 = User(name='Thomas Edison', uid='toby', password='123toby', kasm_server_needed=True, status=True, role="Admin")
-        u2 = User(name='Nicholas Tesla', uid='niko', password='123niko', kasm_server_needed=False, status=True)
-        u3 = User(name='Alexander Graham Bell', uid='lex', kasm_server_needed=True, status=True)
-        u4 = User(name='Grace Hopper', uid='hop', password='123hop', kasm_server_needed=False, status=True)
+        u1 = User(name='Thomas Edison', uid='toby', password='123toby', pfp='thomas-edison.png', kasm_server_needed=True, status=True, role="Admin")
+        u2 = User(name='Nicholas Tesla', uid='niko', password='123niko', pfp='nicholas-tesla.png', kasm_server_needed=False, status=True)
+        u3 = User(name='Alexander Graham Bell', uid='lex', pfp='alexander-graham-bell.png', kasm_server_needed=True, status=True)
+        u4 = User(name='Grace Hopper', uid='hop', password='123hop', pfp='grace-hopper.png', kasm_server_needed=False, status=True)
         users = [u1, u2, u3, u4]
         
         for user in users:
