@@ -11,6 +11,7 @@ from __init__ import app, db, login_manager  # Key Flask objects
 
 # API endpoints
 from api.user import user_api 
+from api.pfp import pfp_api
 # database Initialization functions
 from model.users import User, initUsers, Section 
 # server only Views
@@ -18,6 +19,7 @@ from model.users import User, initUsers, Section
 
 # register URIs for api endpoints
 app.register_blueprint(user_api) 
+app.register_blueprint(pfp_api) 
 # register URIs for server pages
 @login_manager.user_loader
 def load_user(user_id):
