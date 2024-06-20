@@ -1,4 +1,4 @@
-from flask import Blueprint, request, g
+from flask import Blueprint, request
 from flask_restful import Api, Resource
 import base64
 from model.users import User
@@ -6,16 +6,15 @@ from __init__ import db
 import os
 from werkzeug.utils import secure_filename
 
-pfp_api = Blueprint('pfp_api', __name__, url_prefix='/api/pfp')
+pfp_api = Blueprint('pfp_api', __name__, url_prefix='/api/user')
 api = Api(pfp_api)
 
-# Resource: uploading profile picture/image
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-class _UploadPFP(Resource):
+class _PFP(Resource):
     def post(self):
         if 'file' not in request.files:
             return {'message': 'Please upload an image first'}, 400
@@ -37,15 +36,18 @@ class _UploadPFP(Resource):
 
         try:
             filename = secure_filename(file.filename)
-            file.save(os.path.join('instance', filename))  # Save the file to the 'instance' directory
-            user._pfp = filename
+            user_dir = os.path.join('instance', 'uploads', user_uid)
+            if not os.path.exists(user_dir):
+                os.makedirs(user_dir)
+            file_path = os.path.join(user_dir, filename)
+            file.save(file_path)
+            user._pfp = os.path.join('uploads', user_uid, filename)
             db.session.commit()
             return {'message': 'Profile picture updated successfully'}, 200
         except Exception as e:
             db.session.rollback()
-            return {'message': 'An error occurred while updating the profile picture'}, 500
+            return {'message': f'An error occurred while updating the profile picture: {str(e)}'}, 500
 
-class _GetPFP(Resource):
     def get(self):
         user_uid = request.args.get('uid')
         if not user_uid:
@@ -66,5 +68,4 @@ class _GetPFP(Resource):
         else:
             return {'message': 'Profile picture not set.'}, 404
         
-api.add_resource(_UploadPFP, '/upload-pfp')
-api.add_resource(_GetPFP, '/get-pfp')
+api.add_resource(_PFP, '/pfp')
