@@ -10,6 +10,7 @@
                     <th>Name</th>
                     <th>UID</th>
                     <th>Role</th>
+                    <th>Profile Picture</th> <!-- Added new column for PFP -->
                     <th>Kasm Server Needed</th>
                     <th>Classes</th>
                     <th>Actions</th>
@@ -23,6 +24,13 @@
                         <td>{{ user.name }}</td>
                         <td>{{ user.uid }}</td>
                         <td>{{ user.role }}</td>
+                        <td>
+                            {% if user.pfp %}
+                                <img src="{{ url_for('static', filename='uploads/' + user.uid + '/' + user.pfp) }}" alt="Profile Picture" class="img-thumbnail" style="width: 50px; height: 50px;">
+                            {% else %}
+                                <img src="{{ url_for('static', filename='default_profile.png') }}" alt="Default Profile Picture" class="img-thumbnail" style="width: 50px; height: 50px;"> <!-- 'default_profile.png not fully implemented yet' -->
+                            {% endif %}
+                        </td>
                         <td id="kasm-{{ user.id }}">{{ user.kasm_server_needed }}</td>
                         <td>
                             {% for section in user.sections %}
