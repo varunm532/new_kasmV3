@@ -10,7 +10,7 @@
                     <th>Name</th>
                     <th>UID</th>
                     <th>Role</th>
-                    <th>Profile Picture</th> <!-- Added new column for PFP -->
+                    <th>Profile Picture</th>
                     <th>Kasm Server Needed</th>
                     <th>Classes</th>
                     <th>Actions</th>
@@ -26,9 +26,9 @@
                         <td>{{ user.role }}</td>
                         <td>
                             {% if user.pfp %}
-                                <img src="{{ url_for('static', filename='uploads/' + user.uid + '/' + user.pfp) }}" alt="Profile Picture" class="img-thumbnail" style="width: 50px; height: 50px;">
+                                <img src="{{ url_for('static', filename='uploads/' + '/' + user.pfp) }}" alt="Profile Picture" class="img-thumbnail" style="width: 50px; height: 50px;">
                             {% else %}
-                                <img src="{{ url_for('static', filename='default_profile.png') }}" alt="Default Profile Picture" class="img-thumbnail" style="width: 50px; height: 50px;"> <!-- 'default_profile.png not fully implemented yet' -->
+                                <img src="{{ url_for('static', filename='default_profile.png') }}" alt="Default Profile Picture" class="img-thumbnail" style="width: 50px; height: 50px;">
                             {% endif %}
                         </td>
                         <td id="kasm-{{ user.id }}">{{ user.kasm_server_needed }}</td>
@@ -50,58 +50,55 @@
         </table>
     </div>
     
-<!-- Modal for edit form -->
-<!-- Edit User Modal -->
-<div class="modal fade" id="editModal" tabindex="-1" role="dialog" aria-labelledby="editModalLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="editModalLabel">Edit User</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <form id="editUserForm">
-                    <input type="hidden" id="userId">
-                    <div class="form-group">
-                        <label for="kasmServerNeeded">Kasm Server Needed</label>
-                        <select class="form-control" id="kasmServerNeeded">
-                            <option value="true">True</option>
-                            <option value="false">False</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="status">Status</label>
-                        <select class="form-control" id="status">
-                            <option value="true">Approved</option>
-                            <option value="false">Not Approved</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="csp">CSP</label>
-                        <input type="checkbox" id="csp">
-                    </div>
-                    <div class="form-group">
-                        <label for="csa">CSA</label>
-                        <input type="checkbox" id="csa">
-                    </div>
-                    <div class="form-group">
-                        <label for="robotics">Robotics</label>
-                        <input type="checkbox" id="robotics">
-                    </div>
-                    <div class="form-group">
-                        <label for="animation">Animation</label>
-                        <input type="checkbox" id="animation">
-                    </div>
-                    <button type="button" class="btn btn-primary" id="saveChanges">Save changes</button>
-                </form>
+    <!-- Modal for edit form -->
+    <div class="modal fade" id="editModal" tabindex="-1" role="dialog" aria-labelledby="editModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editModalLabel">Edit User</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="editUserForm">
+                        <input type="hidden" id="userId">
+                        <div class="form-group">
+                            <label for="kasmServerNeeded">Kasm Server Needed</label>
+                            <select class="form-control" id="kasmServerNeeded">
+                                <option value="true">True</option>
+                                <option value="false">False</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="status">Status</label>
+                            <select class="form-control" id="status">
+                                <option value="true">Approved</option>
+                                <option value="false">Not Approved</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="csp">CSP</label>
+                            <input type="checkbox" id="csp">
+                        </div>
+                        <div class="form-group">
+                            <label for="csa">CSA</label>
+                            <input type="checkbox" id="csa">
+                        </div>
+                        <div class="form-group">
+                            <label for="robotics">Robotics</label>
+                            <input type="checkbox" id="robotics">
+                        </div>
+                        <div class="form-group">
+                            <label for="animation">Animation</label>
+                            <input type="checkbox" id="animation">
+                        </div>
+                        <button type="button" class="btn btn-primary" id="saveChanges">Save changes</button>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
-</div>
-
-
 
     <!-- Modal for delete confirmation -->
     <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
@@ -123,109 +120,107 @@
         </div>
     </div>
 
-    
 {% endblock %}
 
 {% block background %}
     <!-- JavaScript for edit and delete functionality -->
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-    const editButtons = document.querySelectorAll('.edit-btn');
-    const deleteButtons = document.querySelectorAll('.delete-btn');
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const editButtons = document.querySelectorAll('.edit-btn');
+            const deleteButtons = document.querySelectorAll('.delete-btn');
 
-    editButtons.forEach(button => {
-        button.addEventListener('click', async function() {
-            const userId = this.getAttribute('data-id');
-            const kasm = document.getElementById(`kasm-${userId}`).textContent.trim().toLowerCase() === 'true';
-            const status = document.getElementById(`status-${userId}`).textContent.trim().toLowerCase() === 'approved';
+            editButtons.forEach(button => {
+                button.addEventListener('click', async function() {
+                    const userId = this.getAttribute('data-id');
+                    const kasm = document.getElementById(`kasm-${userId}`).textContent.trim().toLowerCase() === 'true';
+                    const status = document.getElementById(`status-${userId}`).textContent.trim().toLowerCase() === 'approved';
 
-            document.getElementById('kasmServerNeeded').value = kasm.toString();
-            document.getElementById('status').value = status.toString();
-            document.getElementById('userId').value = userId;
+                    document.getElementById('kasmServerNeeded').value = kasm.toString();
+                    document.getElementById('status').value = status.toString();
+                    document.getElementById('userId').value = userId;
 
-            // Fetch user's current classes
-            const userClassesResponse = await fetch(`/users/${userId}/classes`);
-            const userClasses = await userClassesResponse.json();
+                    // Fetch user's current classes
+                    const userClassesResponse = await fetch(`/users/${userId}/classes`);
+                    const userClasses = await userClassesResponse.json();
 
-            document.getElementById('csp').checked = userClasses.csp;
-            document.getElementById('csa').checked = userClasses.csa;
-            document.getElementById('robotics').checked = userClasses.robotics;
-            document.getElementById('animation').checked = userClasses.animation;
+                    document.getElementById('csp').checked = userClasses.csp;
+                    document.getElementById('csa').checked = userClasses.csa;
+                    document.getElementById('robotics').checked = userClasses.robotics;
+                    document.getElementById('animation').checked = userClasses.animation;
 
-            $('#editModal').modal('show');
+                    $('#editModal').modal('show');
+                });
+            });
+
+            document.getElementById('saveChanges').addEventListener('click', function() {
+                const userId = document.getElementById('userId').value;
+                const kasmServerNeeded = document.getElementById('kasmServerNeeded').value === 'true';
+                const status = document.getElementById('status').value === 'true';
+                const classes = {
+                    csp: document.getElementById('csp').checked,
+                    csa: document.getElementById('csa').checked,
+                    robotics: document.getElementById('robotics').checked,
+                    animation: document.getElementById('animation').checked
+                };
+
+                // Send AJAX request to update user data
+                fetch(`/users/edit/${userId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        kasmServerNeeded: kasmServerNeeded,
+                        status: status,
+                        classes: classes
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // Update table with new data
+                    document.getElementById(`kasm-${userId}`).textContent = data.kasmServerNeeded ? 'True' : 'False';
+                    document.getElementById(`status-${userId}`).textContent = data.status ? 'Approved' : 'Not Approved';
+
+                    // Reload the page
+                    location.reload();
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+            });
+
+            deleteButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const userId = this.getAttribute('data-id');
+                    document.getElementById('deleteUserId').value = userId;
+
+                    $('#deleteModal').modal('show');
+                });
+            });
+
+            document.getElementById('confirmDelete').addEventListener('click', function() {
+                const userId = document.getElementById('deleteUserId').value;
+
+                // Send AJAX request to delete user
+                fetch(`/users/delete/${userId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => {
+                    if (response.ok) {
+                        // Remove the user row from the table
+                        document.querySelector(`button[data-id="${userId}"]`).closest('tr').remove();
+                        $('#deleteModal').modal('hide');
+                    } else {
+                        console.error('Error deleting user');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+            });
         });
-    });
-
-    document.getElementById('saveChanges').addEventListener('click', function() {
-        const userId = document.getElementById('userId').value;
-        const kasmServerNeeded = document.getElementById('kasmServerNeeded').value === 'true';
-        const status = document.getElementById('status').value === 'true';
-        const classes = {
-            csp: document.getElementById('csp').checked,
-            csa: document.getElementById('csa').checked,
-            robotics: document.getElementById('robotics').checked,
-            animation: document.getElementById('animation').checked
-        };
-
-        // Send AJAX request to update user data
-        fetch(`/users/edit/${userId}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                kasmServerNeeded: kasmServerNeeded,
-                status: status,
-                classes: classes
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            // Update table with new data
-            document.getElementById(`kasm-${userId}`).textContent = data.kasmServerNeeded ? 'True' : 'False';
-            document.getElementById(`status-${userId}`).textContent = data.status ? 'Approved' : 'Not Approved';
-
-            // Reload the page
-            location.reload();
-        })
-        .catch(error => {
-            console.error('Error:', error);
-        });
-    });
-
-    deleteButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            const userId = this.getAttribute('data-id');
-            document.getElementById('deleteUserId').value = userId;
-
-            $('#deleteModal').modal('show');
-        });
-    });
-
-    document.getElementById('confirmDelete').addEventListener('click', function() {
-        const userId = document.getElementById('deleteUserId').value;
-
-        // Send AJAX request to delete user
-        fetch(`/users/delete/${userId}`, {
-            method: 'DELETE',
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        })
-        .then(response => {
-            if (response.ok) {
-                // Remove the user row from the table
-                document.querySelector(`button[data-id="${userId}"]`).closest('tr').remove();
-                $('#deleteModal').modal('hide');
-            } else {
-                console.error('Error deleting user');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-        });
-    });
-});
-
-  </script>
+    </script>
 {% endblock %}
