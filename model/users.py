@@ -75,19 +75,17 @@ class User(db.Model, UserMixin):
     _role = db.Column(db.String(20), default="User", nullable=False)
     _pfp = db.Column(db.String(255), unique=False, nullable=True)
     kasm_server_needed = db.Column(db.Boolean, default=False)
-    status = db.Column(db.Boolean, default=True)
     
     # Relationship to manage the association between users and sections
     sections = db.relationship('Section', secondary=user_sections, lazy='subquery',
                                backref=db.backref('users', lazy=True))
 
     # Constructor of a User object, initializes the instance variables within object (self)
-    def __init__(self, name, uid, password="123qwerty", kasm_server_needed=False, status=True, role="User", pfp=''):
+    def __init__(self, name, uid, password="123qwerty", kasm_server_needed=False, role="User", pfp=''):
         self._name = name
         self._uid = uid
         self.set_password(password)
         self.kasm_server_needed = kasm_server_needed
-        self.status = status
         self._role = role
         self._pfp = pfp
 
@@ -196,13 +194,12 @@ class User(db.Model, UserMixin):
             "role": self._role,
             "pfp": self._pfp,
             "kasm_server_needed": self.kasm_server_needed,
-            "status": self.status,
             "sections": [section.read() for section in self.sections] if self.sections else None
         }
 
     # CRUD update: updates user name, password, phone
     # returns self
-    def update(self, name="", uid="", password="", pfp="", kasm_server_needed=None, status=None):
+    def update(self, name="", uid="", password="", pfp="", kasm_server_needed=None):
         """only updates values with length"""
         if len(name) > 0:
             self.name = name
@@ -214,8 +211,6 @@ class User(db.Model, UserMixin):
             self.pfp = pfp
         if kasm_server_needed is not None:
             self.kasm_server_needed = kasm_server_needed
-        if status is not None:
-            self.status = status
         db.session.commit()
         return self
 
@@ -250,10 +245,10 @@ def initUsers():
         db.create_all()
         """Tester data for table"""
         
-        u1 = User(name='Thomas Edison', uid='toby', password='123toby', pfp='thomas-edison.png', kasm_server_needed=True, status=True, role="Admin")
-        u2 = User(name='Nicholas Tesla', uid='niko', password='123niko', pfp='nicholas-tesla.png', kasm_server_needed=False, status=True)
-        u3 = User(name='Alexander Graham Bell', uid='lex', pfp='alexander-graham-bell.png', kasm_server_needed=True, status=True)
-        u4 = User(name='Grace Hopper', uid='hop', password='123hop', pfp='grace-hopper.png', kasm_server_needed=False, status=True)
+        u1 = User(name='Thomas Edison', uid='toby', password='123toby', pfp='thomas-edison.png', kasm_server_needed=True, role="Admin")
+        u2 = User(name='Nicholas Tesla', uid='niko', password='123niko', pfp='nicholas-tesla.png', kasm_server_needed=False)
+        u3 = User(name='Alexander Graham Bell', uid='lex', pfp='alexander-graham-bell.png', kasm_server_needed=True)
+        u4 = User(name='Grace Hopper', uid='hop', password='123hop', pfp='grace-hopper.png', kasm_server_needed=False)
         users = [u1, u2, u3, u4]
         
         for user in users:
