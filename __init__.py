@@ -4,6 +4,8 @@ from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 import os
+from sqlalchemy import create_engine
+
 
 # Setup of key Flask object (app)
 app = Flask(__name__)
@@ -25,12 +27,28 @@ app.config['JWT_TOKEN_NAME'] = JWT_TOKEN_NAME
 
 # Setup SQLAlchemy object and properties for the database (db)
 # Local SQLite database within the instance folder
-dbURI = 'sqlite:///volumes/sqlite.db'
+# dbURI = 'sqlite:///volumes/sqlite.db'
+# app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+# app.config['SQLALCHEMY_DATABASE_URI'] = dbURI
+# db = SQLAlchemy()
+# db.init_app(app)  # Ensure this line is present
+# Migrate(app, db)
+
+DB_USERNAME = 'kasm_admin'
+DB_PASSWORD = 'pZTXfhhcvuqkF2vEy27x'
+DB_HOST = 'kasm-student-db-instance.ctenoof0kzic.us-east-2.rds.amazonaws.com'
+DB_PORT = '3306'  # Default port for MySQL
+DB_NAME = 'user_management_db'
+
+app.config['SQLALCHEMY_DATABASE_URI'] = f'mysql+pymysql://{DB_USERNAME}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SQLALCHEMY_DATABASE_URI'] = dbURI
-db = SQLAlchemy()
-db.init_app(app)  # Ensure this line is present
-Migrate(app, db)
+# app.config['SQLALCHEMY_DATABASE_URI'] = dbURI
+db = SQLAlchemy(app)
+
+# engine = create_engine(dbURI)
+
+
+# Migrate(app, db)
 
 # Images storage settings and location
 app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # maximum size of uploaded content
