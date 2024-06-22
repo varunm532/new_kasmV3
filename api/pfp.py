@@ -36,12 +36,12 @@ class _PFP(Resource):
 
         try:
             filename = secure_filename(file.filename)
-            user_dir = os.path.join('instance', 'uploads', user_uid)
+            user_dir = os.path.join('static', 'uploads', user_uid)
             if not os.path.exists(user_dir):
                 os.makedirs(user_dir)
             file_path = os.path.join(user_dir, filename)
             file.save(file_path)
-            user._pfp = os.path.join('uploads', user_uid, filename)
+            user._pfp = os.path.join(filename)
             db.session.commit()
             return {'message': 'Profile picture updated successfully'}, 200
         except Exception as e:
@@ -58,7 +58,7 @@ class _PFP(Resource):
             return {'message': 'User not found'}, 404
 
         if user._pfp:
-            img_path = os.path.join('instance', user._pfp)
+            img_path = os.path.join('static', 'uploads', user_uid, user._pfp)
             try:
                 with open(img_path, 'rb') as img_file:
                     base64_encoded = base64.b64encode(img_file.read()).decode('utf-8')
