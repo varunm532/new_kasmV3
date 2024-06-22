@@ -1,5 +1,6 @@
 # imports from flask
-from flask import redirect, render_template, request, url_for, jsonify  # import render_template from "public" flask libraries
+from urllib.parse import urljoin, urlparse
+from flask import abort, redirect, render_template, request, url_for, jsonify  # import render_template from "public" flask libraries
 from flask_login import current_user, login_user, logout_user
 from flask.cli import AppGroup
 import jwt 
@@ -16,10 +17,17 @@ from api.pfp import pfp_api
 from model.users import User, initUsers, Section 
 # server only Views
 
-
 # register URIs for api endpoints
 app.register_blueprint(user_api) 
 app.register_blueprint(pfp_api) 
+
+# Tell Flask-Login the view function name of your login route
+login_manager.login_view = "login"
+
+@login_manager.unauthorized_handler
+def unauthorized_callback():
+    return redirect(url_for('login', next=request.path))
+
 # register URIs for server pages
 @login_manager.user_loader
 def load_user(user_id):
@@ -28,6 +36,32 @@ def load_user(user_id):
 @app.context_processor
 def inject_user():
     return dict(current_user=current_user)
+
+# Helper function to check if the URL is safe for redirects
+def is_safe_url(target):
+    ref_url = urlparse(request.host_url)
+    test_url = urlparse(urljoin(request.host_url, target))
+    return test_url.scheme in ('http', 'https') and ref_url.netloc == test_url.netloc
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    error = None
+    next_page = request.args.get('next', '') or request.form.get('next', '')
+    if request.method == 'POST':
+        user = User.query.filter_by(_uid=request.form['username']).first()
+        if user and user.is_password(request.form['password']):
+            login_user(user)
+            if not is_safe_url(next_page):
+                return abort(400)
+            return redirect(next_page or url_for('index'))
+        else:
+            error = 'Invalid username or password.'
+    return render_template("login.html", error=error, next=next_page)
+    
+@app.route('/logout')
+def logout():
+    logout_user()
+    return redirect(url_for('index'))
 
 @app.errorhandler(404)  # catch for URL not found
 def page_not_found(e):
@@ -38,47 +72,6 @@ def page_not_found(e):
 def index():
     print("Home:", current_user)
     return render_template("index.html")
-
-@app.route('/login/')  # connects /table/ URL
-def login_page():
-    return render_template("login.html")
-
-@app.route('/login', methods=['POST'])
-def login():
-    # authenticate user
-    user = User.query.filter_by(_uid=request.form['username']).first()
-    if user and user.is_password(request.form['password']):
-        login_user(user)
-        
-        # Generate JWT token
-        token = jwt.encode(
-            {"_uid": user._uid},
-            current_app.config["SECRET_KEY"],
-            algorithm="HS256"
-        )
-        
-        # Create a response and set the token as a cookie
-        resp = redirect(url_for('index'))
-        resp.set_cookie(current_app.config["JWT_TOKEN_NAME"], 
-                        token,
-                        max_age=3600,
-                        secure=True,
-                        httponly=True,
-                        path='/',
-                        samesite='None')
-        
-        print("Logged in:", current_user)
-        print("Token:", token)
-        
-        return resp
-    else:
-        return 'Invalid username or password'
-
-    
-@app.route('/logout')
-def logout():
-    logout_user()
-    return redirect(url_for('index'))
 
 @app.route('/users/table')
 @login_required
@@ -114,7 +107,6 @@ def delete_user(user_id):
         db.session.commit()
         return jsonify({'message': 'User deleted successfully'}), 200
     return jsonify({'error': 'User not found'}), 404
-
 
 
 # Create an AppGroup for custom commands

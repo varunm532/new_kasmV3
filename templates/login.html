@@ -30,6 +30,8 @@
                             <tr><td><input id='username' name="username" size="20" required></td></tr>
                             <tr><th><label for="password">Password</label></th></tr>
                             <tr><td><input type="password" id="password" name="password" size="20" required></td></tr>
+                            <!-- Hidden input for 'next' page, which is set on unauthorized redirects -->
+                            <input type="hidden" name="next" value="{{ next }}">
                             <tr><th><input type="submit" value="Submit"></th></tr>
                         </table>
                     </form>
