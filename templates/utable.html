@@ -27,7 +27,7 @@
                 <td>{{ user.role }}</td>
                 <td>
                     {% if user.pfp %}
-                    <img src="{{ url_for('static', filename='uploads/' + user.uid + '/' + user.pfp) }}" alt="Profile Picture" class="img-thumbnail" style="width: 50px; height: 50px;">
+                    <img src="{{ url_for('uploaded_file', filename=user.uid + '/' + user.pfp) }}" alt="Profile Picture" class="img-thumbnail" style="width: 50px; height: 50px;">
                     {% else %}
                     <img src="{{ url_for('static', filename='default_profile.png') }}" alt="Default Profile Picture" class="img-thumbnail" style="width: 50px; height: 50px;">
                     {% endif %}

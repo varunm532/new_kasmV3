@@ -1,6 +1,6 @@
 # imports from flask
 from urllib.parse import urljoin, urlparse
-from flask import abort, redirect, render_template, request, url_for, jsonify  # import render_template from "public" flask libraries
+from flask import abort, redirect, render_template, request, send_from_directory, url_for, jsonify  # import render_template from "public" flask libraries
 from flask_login import current_user, login_user, logout_user
 from flask.cli import AppGroup
 import jwt 
@@ -78,6 +78,11 @@ def index():
 def utable():
     users = User.query.all()
     return render_template("utable.html", user_data=users)
+
+# Helper function to extract uploads for a user (ie PFP image)
+@app.route('/uploads/<path:filename>')
+def uploaded_file(filename):
+    return send_from_directory(current_app.config['UPLOAD_FOLDER'], filename)
 
 @app.route('/users/edit/<int:user_id>', methods=['POST'])
 @login_required
