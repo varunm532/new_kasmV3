@@ -46,5 +46,5 @@ migrate = Migrate(app, db)
 # Images storage settings and location
 app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # maximum size of uploaded content
 app.config['UPLOAD_EXTENSIONS'] = ['.jpg', '.png', '.gif']  # supported file types
-app.config['UPLOAD_FOLDER'] = os.path.join(app.static_folder, 'uploads')
+app.config['UPLOAD_FOLDER'] = os.path.join(app.instance_path, 'uploads')
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
