@@ -1,4 +1,4 @@
-FROM docker.io/python:3.10
+FROM docker.io/python:3.11
 
 WORKDIR /
 
@@ -13,5 +13,8 @@ RUN pip install gunicorn
 ENV GUNICORN_CMD_ARGS="--workers=1 --bind=0.0.0.0:8086"
 
 EXPOSE 8086
+
+# Define environment variable
+ENV FLASK_ENV=production
 
 CMD [ "gunicorn", "main:app" ]

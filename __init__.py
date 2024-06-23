@@ -25,30 +25,23 @@ app.config['SECRET_KEY'] = SECRET_KEY
 app.config['SESSION_COOKIE_NAME'] = SESSION_COOKIE_NAME 
 app.config['JWT_TOKEN_NAME'] = JWT_TOKEN_NAME 
 
-# Setup SQLAlchemy object and properties for the database (db)
-# Local SQLite database within the instance folder
-# dbURI = 'sqlite:///volumes/sqlite.db'
-# app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-# app.config['SQLALCHEMY_DATABASE_URI'] = dbURI
-# db = SQLAlchemy()
-# db.init_app(app)  # Ensure this line is present
-# Migrate(app, db)
-
-DB_USERNAME = 'kasm_admin'
-DB_PASSWORD = 'pZTXfhhcvuqkF2vEy27x'
-DB_HOST = 'kasm-student-db-instance.ctenoof0kzic.us-east-2.rds.amazonaws.com'
-DB_PORT = '3306'  # Default port for MySQL
-DB_NAME = 'user_management_db'
-
-app.config['SQLALCHEMY_DATABASE_URI'] = f'mysql+pymysql://{DB_USERNAME}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
+is_production = os.getenv('FLASK_ENV') == 'production'
+if is_production:
+    # Production - Use MySQL
+    DB_USERNAME = 'kasm_admin'
+    DB_PASSWORD = 'pZTXfhhcvuqkF2vEy27x'
+    DB_HOST = 'kasm-student-db-instance.ctenoof0kzic.us-east-2.rds.amazonaws.com'
+    DB_PORT = '3306'
+    DB_NAME = 'user_management_db'
+    dbURI = f'mysql+pymysql://{DB_USERNAME}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
+else:
+    # Development - Use SQLite
+    dbURI = 'sqlite:///volumes/sqlite.db'
+    
+app.config['SQLALCHEMY_DATABASE_URI'] = dbURI
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-# app.config['SQLALCHEMY_DATABASE_URI'] = dbURI
 db = SQLAlchemy(app)
-
-# engine = create_engine(dbURI)
-
-
-# Migrate(app, db)
+migrate = Migrate(app, db)
 
 # Images storage settings and location
 app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # maximum size of uploaded content
