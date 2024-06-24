@@ -43,7 +43,7 @@ class _PFP(Resource):
                 os.makedirs(user_dir)
             file_path = os.path.join(user_dir, filename)
             file.save(file_path)
-            user._pfp = os.path.join(user_uid, filename)
+            user._pfp = os.path.join(filename)
             db.session.commit()
             return {'message': 'Profile picture updated successfully'}, 200
         except Exception as e:
@@ -65,5 +65,35 @@ class _PFP(Resource):
                 return {'message': 'Profile picture file not found.'}, 404
         else:
             return {'message': 'Profile picture not set.'}, 404
+    
+    @token_required()
+    def delete(self):
         
+        current_user = g.current_user
+
+        if current_user.role != 'Admin':
+            return {'message': 'Permission denied.'}, 403
+
+        user_uid = request.args.get('uid')
+        if not user_uid:
+            return {'message': 'UID required.'}, 400
+
+        user = User.query.filter_by(_uid=user_uid).first()
+        if not user:
+            return {'message': 'User not found'}, 404
+
+        if user._pfp:
+            img_path = os.path.join(app.config['UPLOAD_FOLDER'], user_uid, user._pfp)
+            try:
+                if os.path.exists(img_path):
+                    os.remove(img_path)
+                user._pfp = None
+                db.session.commit()
+                return {'message': 'Profile picture deleted successfully'}, 200
+            except Exception as e:
+                db.session.rollback()
+                return {'message': f'An error occurred while deleting the profile picture: {str(e)}'}, 500
+        else:
+            return {'message': 'Profile picture not set.'}, 404
+    
 api.add_resource(_PFP, '/pfp')

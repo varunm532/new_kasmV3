@@ -249,7 +249,8 @@ def initUsers():
         u2 = User(name='Nicholas Tesla', uid='niko', password='123niko', pfp='nicholas-tesla.png', kasm_server_needed=False)
         u3 = User(name='Alexander Graham Bell', uid='lex', pfp='alexander-graham-bell.png', kasm_server_needed=True)
         u4 = User(name='Grace Hopper', uid='hop', password='123hop', pfp='grace-hopper.png', kasm_server_needed=False)
-        users = [u1, u2, u3, u4]
+        u5 = User(name='Fred Flintstone', uid='fred', password='123fred', pfp='fred-flintstone.png', kasm_server_needed=True)
+        users = [u1, u2, u3, u4, u5]
         
         for user in users:
             try:
