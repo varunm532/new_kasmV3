@@ -96,4 +96,28 @@ class _PFP(Resource):
         else:
             return {'message': 'Profile picture not set.'}, 404
     
+    @token_required()
+    def put(self):
+        current_user = g.current_user
+
+        if 'pfp' not in request.json:
+            return {'message': 'Base64 image data required.'}, 400
+
+        base64_image = request.json['pfp']
+        try:
+            image_data = base64.b64decode(base64_image)
+            filename = secure_filename(f'{current_user.uid}.png')
+            user_dir = os.path.join(app.config['UPLOAD_FOLDER'], current_user.uid)
+            if not os.path.exists(user_dir):
+                os.makedirs(user_dir)
+            file_path = os.path.join(user_dir, filename)
+            with open(file_path, 'wb') as img_file:
+                img_file.write(image_data)
+            current_user._pfp = filename
+            db.session.commit()
+            return {'message': 'Profile picture updated successfully'}, 200
+        except Exception as e:
+            db.session.rollback()
+            return {'message': f'An error occurred while updating the profile picture: {str(e)}'}, 500
+    
 api.add_resource(_PFP, '/pfp')

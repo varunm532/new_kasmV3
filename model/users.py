@@ -245,11 +245,11 @@ def initUsers():
         db.create_all()
         """Tester data for table"""
         
-        u1 = User(name='Thomas Edison', uid='toby', password='123toby', pfp='thomas-edison.png', kasm_server_needed=True, role="Admin")
-        u2 = User(name='Nicholas Tesla', uid='niko', password='123niko', pfp='nicholas-tesla.png', kasm_server_needed=False)
-        u3 = User(name='Alexander Graham Bell', uid='lex', pfp='alexander-graham-bell.png', kasm_server_needed=True)
-        u4 = User(name='Grace Hopper', uid='hop', password='123hop', pfp='grace-hopper.png', kasm_server_needed=False)
-        u5 = User(name='Fred Flintstone', uid='fred', password='123fred', pfp='fred-flintstone.png', kasm_server_needed=True)
+        u1 = User(name='Thomas Edison', uid='toby', password='123toby', pfp='toby.png', kasm_server_needed=True, role="Admin")
+        u2 = User(name='Nicholas Tesla', uid='niko', password='123niko', pfp='niko.png', kasm_server_needed=False)
+        u3 = User(name='Alexander Graham Bell', uid='lex', pfp='lex.png', kasm_server_needed=True)
+        u4 = User(name='Grace Hopper', uid='hop', password='123hop', pfp='hop.png', kasm_server_needed=False)
+        u5 = User(name='Fred Flintstone', uid='fred', password='123fred', pfp='fred.png', kasm_server_needed=True)
         users = [u1, u2, u3, u4, u5]
         
         for user in users:
