@@ -143,7 +143,7 @@ class UserAPI:
         def delete(self): # Delete Method
             body = request.get_json()
             uid = body.get('uid')
-            user = User.query.filter_by(uid=uid).first()
+            user = User.query.filter_by(_uid=uid).first()
             if user is None:
                 return {'message': f'User {uid} not found'}, 404
             json = user.read()
