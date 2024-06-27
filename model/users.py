@@ -199,7 +199,7 @@ class User(db.Model, UserMixin):
 
     # CRUD update: updates user name, password, phone
     # returns self
-    def update(self, name="", uid="", password="", pfp="", kasm_server_needed=None):
+    def update(self, name="", uid="", password="", pfp=None, kasm_server_needed=None):
         """only updates values with length"""
         if len(name) > 0:
             self.name = name
@@ -207,12 +207,30 @@ class User(db.Model, UserMixin):
             self.uid = uid
         if len(password) > 0:
             self.set_password(password)
-        if len(pfp) > 0:
+        if pfp is not None:  # here we explicitly check for None to allow setting pfp to None
             self.pfp = pfp
         if kasm_server_needed is not None:
             self.kasm_server_needed = kasm_server_needed
         db.session.commit()
         return self
+    
+    def save_profile_picture(self, image_data, filename):
+        """For saving profile picture."""
+        try:
+            user_dir = os.path.join(app.config['UPLOAD_FOLDER'], self.uid)
+            if not os.path.exists(user_dir):
+                os.makedirs(user_dir)
+            file_path = os.path.join(user_dir, filename)
+            with open(file_path, 'wb') as img_file:
+                img_file.write(image_data)
+            self.update(pfp=filename)
+        except Exception as e:
+            raise e
+
+    def delete_pfp(self):
+        """Deletes profile picture from user record."""
+        self.pfp = None
+        db.session.commit()
 
     # CRUD delete: remove self
     # None

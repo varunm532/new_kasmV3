@@ -3,9 +3,8 @@ from flask_restful import Api, Resource
 import base64
 from api.auth_middleware import token_required
 from model.users import User
-from __init__ import db
-import os
 from werkzeug.utils import secure_filename
+import os
 
 pfp_api = Blueprint('pfp_api', __name__, url_prefix='/api/id')
 api = Api(pfp_api)
@@ -24,10 +23,10 @@ class _PFP(Resource):
 
         if not allowed_file(file.filename):
             return {'message': 'File type not allowed'}, 400
-        
+
         if file.content_length > app.config['MAX_CONTENT_LENGTH']:
             return {'message': 'File size exceeds the allowed limit'}, 400
-        
+
         user_uid = request.form.get('uid')
         if not user_uid:
             return {'message': 'UID required.'}, 400
@@ -43,19 +42,16 @@ class _PFP(Resource):
                 os.makedirs(user_dir)
             file_path = os.path.join(user_dir, filename)
             file.save(file_path)
-            user._pfp = os.path.join(filename)
-            db.session.commit()
+            user.update(pfp=filename)
             return {'message': 'Profile picture updated successfully'}, 200
         except Exception as e:
-            db.session.rollback()
             return {'message': f'An error occurred while updating the profile picture: {str(e)}'}, 500
 
     @token_required()
     def get(self):
-        # retrieve the current user from the token_required authentication check  
         current_user = g.current_user
 
-        if current_user._pfp:
+        if current_user.pfp:
             img_path = os.path.join(app.config['UPLOAD_FOLDER'], current_user.uid, current_user.pfp)
             try:
                 with open(img_path, 'rb') as img_file:
@@ -65,10 +61,9 @@ class _PFP(Resource):
                 return {'message': 'Profile picture file not found.'}, 404
         else:
             return {'message': 'Profile picture not set.'}, 404
-    
+
     @token_required()
     def delete(self):
-        
         current_user = g.current_user
 
         if current_user.role != 'Admin':
@@ -82,20 +77,18 @@ class _PFP(Resource):
         if not user:
             return {'message': 'User not found'}, 404
 
-        if user._pfp:
-            img_path = os.path.join(app.config['UPLOAD_FOLDER'], user_uid, user._pfp)
+        if user.pfp:
+            img_path = os.path.join(app.config['UPLOAD_FOLDER'], user_uid, user.pfp)
             try:
                 if os.path.exists(img_path):
                     os.remove(img_path)
-                user._pfp = None
-                db.session.commit()
+                user.delete_pfp()  # Call the delete_pfp method to update the database
                 return {'message': 'Profile picture deleted successfully'}, 200
             except Exception as e:
-                db.session.rollback()
                 return {'message': f'An error occurred while deleting the profile picture: {str(e)}'}, 500
         else:
             return {'message': 'Profile picture not set.'}, 404
-    
+
     @token_required()
     def put(self):
         current_user = g.current_user
@@ -113,11 +106,9 @@ class _PFP(Resource):
             file_path = os.path.join(user_dir, filename)
             with open(file_path, 'wb') as img_file:
                 img_file.write(image_data)
-            current_user._pfp = filename
-            db.session.commit()
+            current_user.update(pfp=filename)
             return {'message': 'Profile picture updated successfully'}, 200
         except Exception as e:
-            db.session.rollback()
             return {'message': f'An error occurred while updating the profile picture: {str(e)}'}, 500
-    
+
 api.add_resource(_PFP, '/pfp')
