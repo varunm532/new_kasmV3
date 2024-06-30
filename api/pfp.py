@@ -3,6 +3,7 @@ from flask_restful import Api, Resource
 import base64
 from api.auth_middleware import token_required
 from model.users import User
+from model.pfp import file_upload
 from werkzeug.utils import secure_filename
 import os
 
@@ -35,17 +36,14 @@ class _PFP(Resource):
         if not user:
             return {'message': 'User not found'}, 404
 
-        try:
-            filename = secure_filename(file.filename)
-            user_dir = os.path.join(app.config['UPLOAD_FOLDER'], user_uid)
-            if not os.path.exists(user_dir):
-                os.makedirs(user_dir)
-            file_path = os.path.join(user_dir, filename)
-            file.save(file_path)
-            user.update(pfp=filename)
+        if not file_upload(file, user_uid):
+            return {'message': 'An error occurred while uploading the profile picture'}, 500
+        
+        try: 
+            user.update(pfp=file.filename)
             return {'message': 'Profile picture updated successfully'}, 200
         except Exception as e:
-            return {'message': f'An error occurred while updating the profile picture: {str(e)}'}, 500
+            return {'message': f'A database error occurred while assigning profile picture: {str(e)}'}, 500
 
     @token_required()
     def get(self):
