@@ -250,7 +250,7 @@ class User(db.Model, UserMixin):
             # Commit the changes to the database
             db.session.commit()
         else:
-            # Handle the case where the section does not exist
+            # Handle the case where the section exists
             print("Section with abbreviation '{}' exists.".format(section._abbreviation))
         return self
 
