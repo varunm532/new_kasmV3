@@ -3,8 +3,7 @@ from flask_restful import Api, Resource
 import base64
 from api.auth_middleware import token_required
 from model.users import User
-from model.pfp import file_upload
-from werkzeug.utils import secure_filename
+from model.pfp import file_upload, base64_upload
 import os
 
 pfp_api = Blueprint('pfp_api', __name__, url_prefix='/api/id')
@@ -95,18 +94,16 @@ class _PFP(Resource):
             return {'message': 'Base64 image data required.'}, 400
 
         base64_image = request.json['pfp']
-        try:
-            image_data = base64.b64decode(base64_image)
-            filename = secure_filename(f'{current_user.uid}.png')
-            user_dir = os.path.join(app.config['UPLOAD_FOLDER'], current_user.uid)
-            if not os.path.exists(user_dir):
-                os.makedirs(user_dir)
-            file_path = os.path.join(user_dir, filename)
-            with open(file_path, 'wb') as img_file:
-                img_file.write(image_data)
+        
+        if not base64_upload(base64_image, current_user.uid):
+            return {'message': 'An error occurred while uploading the profile picture'}, 500
+        
+        filename = f'{current_user.uid}.png'
+
+        try: 
             current_user.update(pfp=filename)
             return {'message': 'Profile picture updated successfully'}, 200
         except Exception as e:
-            return {'message': f'An error occurred while updating the profile picture: {str(e)}'}, 500
-
+            return {'message': f'A database error occurred while assigning profile picture: {str(e)}'}, 500
+        
 api.add_resource(_PFP, '/pfp')
