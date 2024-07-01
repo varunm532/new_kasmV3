@@ -1,16 +1,11 @@
-from flask import Blueprint, g, request, current_app as app
+from flask import Blueprint, g, request
 from flask_restful import Api, Resource
-import base64
 from api.auth_middleware import token_required
 from model.users import User
 from model.pfp import pfp_base64_decode, pfp_base64_upload, pfp_file_delete
-import os
 
 pfp_api = Blueprint('pfp_api', __name__, url_prefix='/api/id')
 api = Api(pfp_api)
-
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in [ext.strip('.') for ext in app.config['UPLOAD_EXTENSIONS']]
 
 class _PFP(Resource):
     """
