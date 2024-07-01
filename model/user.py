@@ -56,6 +56,13 @@ class Section(db.Model):
             "name": self._name,
             "abbreviation": self._abbreviation
         }
+        
+    # CRUD delete: remove self
+    # None
+    def delete(self):
+        db.session.delete(self)
+        db.session.commit()
+        return None
 
 
 

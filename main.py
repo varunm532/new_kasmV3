@@ -10,13 +10,15 @@ from flask import current_app
 from __init__ import app, db, login_manager  # Key Flask objects 
 # API endpoints
 from api.user import user_api 
+from api.section import section_api
 from api.pfp import pfp_api
 # database Initialization functions
 from model.user import User, initUsers
 # server only Views
 
 # register URIs for api endpoints
-app.register_blueprint(user_api) 
+app.register_blueprint(user_api)
+app.register_blueprint(section_api)
 app.register_blueprint(pfp_api) 
 
 # Tell Flask-Login the view function name of your login route
