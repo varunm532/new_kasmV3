@@ -265,7 +265,7 @@ def initUsers():
         
         u1 = User(name='Thomas Edison', uid='toby', password='123toby', pfp='toby.png', kasm_server_needed=True, role="Admin")
         u2 = User(name='Nicholas Tesla', uid='niko', password='123niko', pfp='niko.png', kasm_server_needed=False)
-        u3 = User(name='Alexander Graham Bell', uid='lex', passwrod='123lex', pfp='lex.png', kasm_server_needed=True)
+        u3 = User(name='Alexander Graham Bell', uid='lex', password='123lex', pfp='lex.png', kasm_server_needed=True)
         u4 = User(name='Grace Hopper', uid='hop', password='123hop', pfp='hop.png', kasm_server_needed=False)
         u5 = User(name='Fred Flintstone', uid='fred', pfp='fred.png', kasm_server_needed=True)
         users = [u1, u2, u3, u4, u5]
