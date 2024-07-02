@@ -65,13 +65,27 @@ class Section(db.Model):
         return None
 
 
-
-# Define the User class to manage actions in the 'users' table
-# -- Object Relational Mapping (ORM) is the key concept of SQLAlchemy
-# -- a.) db.Model is like an inner layer of the onion in ORM
-# -- b.) User represents data we want to store, something that is built on db.Model
-# -- c.) SQLAlchemy ORM is layer on top of SQLAlchemy Core, then SQLAlchemy engine, SQL
+# Define a User class that inherits from db.Model and UserMixin
 class User(db.Model, UserMixin):
+    """
+    User Model
+
+    This class represents the User model, which is used to manage actions in the 'users' table of the database. It is an
+    implementation of Object Relational Mapping (ORM) using SQLAlchemy, allowing for easy interaction with the database
+    using Python code. The User model includes various fields and methods to support user management, authentication,
+    and profile management functionalities.
+
+    Attributes:
+        __tablename__ (str): Specifies the name of the table in the database.
+        id (Column): The primary key, an integer representing the unique identifier for the user.
+        _name (Column): A string representing the user's name. It is not unique and cannot be null.
+        _uid (Column): A unique string identifier for the user, cannot be null.
+        _password (Column): A string representing the hashed password of the user. It is not unique and cannot be null.
+        _role (Column): A string representing the user's role within the application. Defaults to "User".
+        _pfp (Column): A string representing the path to the user's profile picture. It can be null.
+        kasm_server_needed (Column): A boolean indicating whether the user requires a Kasm server.
+        sections (Relationship): A many-to-many relationship between users and sections, allowing users to be associated with multiple sections.
+    """
     __tablename__ = 'users'  # table name is plural, class name is singular
 
     # Define the User schema with "vars" from object
