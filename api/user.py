@@ -150,6 +150,32 @@ class UserAPI:
             # 204 is the status code for delete with no json response
             return f"Deleted user: {json}", 204 # use 200 to test with Postman
          
+    class _Section(Resource):  # Section API operation
+        @token_required()
+        def get(self):
+            ''' Retrieve the current user from the token_required authentication check '''
+            current_user = g.current_user
+            ''' Return the current user as a json object '''
+            return jsonify(current_user.read_sections())
+       
+        @token_required() 
+        def post(self):
+            ''' Retrieve the current user from the token_required authentication check '''
+            current_user = g.current_user
+            
+            ''' Read data for json body '''
+            body = request.get_json()
+            
+            ''' Error checking '''
+            sections = body.get('sections')
+            if sections is None or len(sections) == 0:
+                return {'message': f"No sections to add were provided"}, 400
+            
+            ''' Add sections'''
+            if not current_user.add_sections(sections):
+                return {'message': f'1 or more sections failed to add, current {sections} requested {current_user.read_sections()}'}, 404
+            
+            return jsonify(current_user.read_sections())
     class _Security(Resource):
         def post(self):
             try:
@@ -217,5 +243,6 @@ class UserAPI:
 
     # building RESTapi endpoint
     api.add_resource(_ID, '/id')
-    api.add_resource(_CRUD, '/users')
+    api.add_resource(_CRUD, '/user')
+    api.add_resource(_Section, '/user/section') 
     api.add_resource(_Security, '/authenticate')          

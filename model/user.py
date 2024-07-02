@@ -203,7 +203,7 @@ class User(db.Model, UserMixin):
             "kasm_server_needed": self.kasm_server_needed,
             "sections": [section.read() for section in self.sections] if self.sections else None
         }
-
+        
     # CRUD update: updates user name, password, phone
     # returns self
     def update(self, name="", uid="", password="", pfp=None, kasm_server_needed=None):
@@ -221,6 +221,7 @@ class User(db.Model, UserMixin):
         db.session.commit()
         return self
     
+    
     def save_pfp(self, image_data, filename):
         """For saving profile picture."""
         try:
@@ -233,18 +234,14 @@ class User(db.Model, UserMixin):
             self.update(pfp=filename)
         except Exception as e:
             raise e
-
+        
     def delete_pfp(self):
         """Deletes profile picture from user record."""
         self.pfp = None
         db.session.commit()
-
-    # CRUD delete: remove self
-    # None
-    def delete(self):
-        db.session.delete(self)
-        db.session.commit()
-        return None
+        
+    def read_sections(self):
+        return { "sections": [section.read() for section in self.sections] if self.sections else None }
     
     def add_section(self, section):
         # Query for the section using the provided abbreviation
@@ -259,6 +256,14 @@ class User(db.Model, UserMixin):
         else:
             # Handle the case where the section exists
             print("Section with abbreviation '{}' exists.".format(section._abbreviation))
+        return self
+    
+    def add_sections(self, sections):
+        for section in sections:
+            section_obj = Section.query.filter_by(_abbreviation=section).first()
+            if not section_obj:
+                return None
+            self.add_section(section_obj)
         return self
 
 """Database Creation and Testing """
