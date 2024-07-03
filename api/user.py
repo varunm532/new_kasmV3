@@ -206,10 +206,9 @@ class UserAPI:
                 if user:
                     try:
                         token = jwt.encode(
-                       {"_uid": user._uid},
-              #          {"role": user._role},
-                        current_app.config["SECRET_KEY"],
-                        algorithm="HS256"
+                            {"_uid": user._uid},
+                            current_app.config["SECRET_KEY"],
+                            algorithm="HS256"
                         )
                         resp = Response("Authentication for %s successful" % (user._uid))
                         resp.set_cookie(current_app.config["JWT_TOKEN_NAME"], 
@@ -236,13 +235,46 @@ class UserAPI:
                             }, 404
             except Exception as e:
                  return {
-                                    "message": "Something went wrong!",
-                                    "error": str(e),
-                                    "data": None
+                                "message": "Something went wrong!",
+                                "error": str(e),
+                                "data": None
                             }, 500
+                 
+        @token_required()
+        def delete(self):
+            ''' Invalidate the current user's token by setting its expiry to 0 '''
+            current_user = g.current_user
+            try:
+                # Generate a token with practically 0 age
+                token = jwt.encode(
+                    {"_uid": current_user._uid, 
+                     "exp": datetime.utcnow()},
+                    current_app.config["SECRET_KEY"],
+                    algorithm="HS256"
+                )
+                # You might want to log this action or take additional steps here
+                
+                # Prepare a response indicating the token has been invalidated
+                resp = Response("Token invalidated successfully")
+                resp.set_cookie(
+                    current_app.config["JWT_TOKEN_NAME"], 
+                    token,
+                    max_age=0,  # Immediately expire the cookie
+                    secure=True,
+                    httponly=True,
+                    path='/',
+                    samesite='None'
+                )
+                return resp
+            except Exception as e:
+                return {
+                    "message": "Failed to invalidate token",
+                    "error": str(e)
+                }, 500
 
     # building RESTapi endpoint
     api.add_resource(_ID, '/id')
     api.add_resource(_CRUD, '/user')
     api.add_resource(_Section, '/user/section') 
     api.add_resource(_Security, '/authenticate')          
+    
