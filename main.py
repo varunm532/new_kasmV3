@@ -3,22 +3,22 @@ from urllib.parse import urljoin, urlparse
 from flask import abort, redirect, render_template, request, send_from_directory, url_for, jsonify  # import render_template from "public" flask libraries
 from flask_login import current_user, login_user, logout_user
 from flask.cli import AppGroup
-import jwt 
 from flask_login import current_user, login_required
 from flask import current_app
 
 # import "objects" from "this" project
 from __init__ import app, db, login_manager  # Key Flask objects 
-
 # API endpoints
 from api.user import user_api 
+from api.section import section_api
 from api.pfp import pfp_api
 # database Initialization functions
-from model.users import User, initUsers, Section 
+from model.user import User, initUsers
 # server only Views
 
 # register URIs for api endpoints
-app.register_blueprint(user_api) 
+app.register_blueprint(user_api)
+app.register_blueprint(section_api)
 app.register_blueprint(pfp_api) 
 
 # Tell Flask-Login the view function name of your login route

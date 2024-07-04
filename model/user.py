@@ -13,13 +13,55 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 ''' Tutorial: https://www.sqlalchemy.org/library.html#tutorials, try to get into Python shell and follow along '''
 
-user_sections = db.Table('user_sections',
-    db.Column('user_id', db.Integer, db.ForeignKey('users.id'), primary_key=True),
-    db.Column('section_id', db.Integer, db.ForeignKey('sections.id'), primary_key=True)
-)
+""" Database Models """
+
+class UserSection(db.Model):
+    """ 
+    UserSection Model
+
+    A many-to-many relationship between the 'users' and 'sections' tables.
+
+    Attributes:
+        user_id (Column): An integer representing the user's unique identifier, a foreign key that references the 'users' table.
+        section_id (Column): An integer representing the section's unique identifier, a foreign key that references the 'sections' table.
+        year (Column): An integer representing the year the user enrolled with the section. Defaults to the current year.
+    """
+    __tablename__ = 'user_sections'
+    
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
+    section_id = db.Column(db.Integer, db.ForeignKey('sections.id'), primary_key=True)
+    year = db.Column(db.Integer)
+
+    # Relationship backrefs
+    user = db.relationship("User", backref=db.backref("user_sections", cascade="all, delete-orphan"))
+    section = db.relationship("Section", backref=db.backref("user_sections", cascade="all, delete-orphan"))
+
+    def __init__(self, user, section):
+        self.user = user
+        self.section = section
+        self.set_year_based_on_enrollment()
+
+    def set_year_based_on_enrollment(self):
+        current_month = date.today().month
+        current_year = date.today().year
+        # If current month is between August (8) and December (12), the enrollment year is next year.
+        if 7 <= current_month <= 12:
+            self.year = current_year + 1
+        else:
+            self.year = current_year
 
 # Define a many-to-many relationship to 'users' table
 class Section(db.Model):
+    """
+    Section Model
+    
+    The Section class represents a section within the application, such as a class, department or group.
+    
+    Attributes:
+        id (db.Column): The primary key, an integer representing the unique identifier for the section.
+        _name (db.Column): A string representing the name of the section. It is not unique and cannot be null.
+        _abbreviation (db.Column): A unique string representing the abbreviation of the section's name. It cannot be null.
+    """
     __tablename__ = 'sections'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -56,15 +98,36 @@ class Section(db.Model):
             "name": self._name,
             "abbreviation": self._abbreviation
         }
+        
+    # CRUD delete: remove self
+    # None
+    def delete(self):
+        db.session.delete(self)
+        db.session.commit()
+        return None
 
 
-
-# Define the User class to manage actions in the 'users' table
-# -- Object Relational Mapping (ORM) is the key concept of SQLAlchemy
-# -- a.) db.Model is like an inner layer of the onion in ORM
-# -- b.) User represents data we want to store, something that is built on db.Model
-# -- c.) SQLAlchemy ORM is layer on top of SQLAlchemy Core, then SQLAlchemy engine, SQL
+# Define a User class that inherits from db.Model and UserMixin
 class User(db.Model, UserMixin):
+    """
+    User Model
+
+    This class represents the User model, which is used to manage actions in the 'users' table of the database. It is an
+    implementation of Object Relational Mapping (ORM) using SQLAlchemy, allowing for easy interaction with the database
+    using Python code. The User model includes various fields and methods to support user management, authentication,
+    and profile management functionalities.
+
+    Attributes:
+        __tablename__ (str): Specifies the name of the table in the database.
+        id (Column): The primary key, an integer representing the unique identifier for the user.
+        _name (Column): A string representing the user's name. It is not unique and cannot be null.
+        _uid (Column): A unique string identifier for the user, cannot be null.
+        _password (Column): A string representing the hashed password of the user. It is not unique and cannot be null.
+        _role (Column): A string representing the user's role within the application. Defaults to "User".
+        _pfp (Column): A string representing the path to the user's profile picture. It can be null.
+        kasm_server_needed (Column): A boolean indicating whether the user requires a Kasm server.
+        sections (Relationship): A many-to-many relationship between users and sections, allowing users to be associated with multiple sections.
+    """
     __tablename__ = 'users'  # table name is plural, class name is singular
 
     # Define the User schema with "vars" from object
@@ -77,7 +140,7 @@ class User(db.Model, UserMixin):
     kasm_server_needed = db.Column(db.Boolean, default=False)
     
     # Relationship to manage the association between users and sections
-    sections = db.relationship('Section', secondary=user_sections, lazy='subquery',
+    sections = db.relationship('Section', secondary=UserSection.__table__, lazy='subquery',
                                backref=db.backref('users', lazy=True))
 
     # Constructor of a User object, initializes the instance variables within object (self)
@@ -196,7 +259,7 @@ class User(db.Model, UserMixin):
             "kasm_server_needed": self.kasm_server_needed,
             "sections": [section.read() for section in self.sections] if self.sections else None
         }
-
+        
     # CRUD update: updates user name, password, phone
     # returns self
     def update(self, name="", uid="", password="", pfp=None, kasm_server_needed=None):
@@ -214,6 +277,14 @@ class User(db.Model, UserMixin):
         db.session.commit()
         return self
     
+    # CRUD delete: remove self
+    # None
+    def delete(self):
+        db.session.delete(self)
+        db.session.commit()
+        return None
+    
+    
     def save_pfp(self, image_data, filename):
         """For saving profile picture."""
         try:
@@ -226,18 +297,14 @@ class User(db.Model, UserMixin):
             self.update(pfp=filename)
         except Exception as e:
             raise e
-
+        
     def delete_pfp(self):
         """Deletes profile picture from user record."""
         self.pfp = None
         db.session.commit()
-
-    # CRUD delete: remove self
-    # None
-    def delete(self):
-        db.session.delete(self)
-        db.session.commit()
-        return None
+        
+    def read_sections(self):
+        return { "sections": [section.read() for section in self.sections] if self.sections else None }
     
     def add_section(self, section):
         # Query for the section using the provided abbreviation
@@ -246,17 +313,27 @@ class User(db.Model, UserMixin):
         # Check if the section was found
         if not found:
             # Add the section to the user's sections
-            self.sections.append(section)
+            user_section = UserSection(user=self, section=section)
+            db.session.add(user_section)
+            
             # Commit the changes to the database
             db.session.commit()
         else:
-            # Handle the case where the section does not exist
+            # Handle the case where the section exists
             print("Section with abbreviation '{}' exists.".format(section._abbreviation))
+        return self
+    
+    def add_sections(self, sections):
+        for section in sections:
+            section_obj = Section.query.filter_by(_abbreviation=section).first()
+            if not section_obj:
+                return None
+            self.add_section(section_obj)
         return self
 
 """Database Creation and Testing """
 
-# Builds working data for testing
+# Builds working data set for testing
 def initUsers():
     with app.app_context():
         """Create database and tables"""
@@ -265,7 +342,7 @@ def initUsers():
         
         u1 = User(name='Thomas Edison', uid='toby', password='123toby', pfp='toby.png', kasm_server_needed=True, role="Admin")
         u2 = User(name='Nicholas Tesla', uid='niko', password='123niko', pfp='niko.png', kasm_server_needed=False)
-        u3 = User(name='Alexander Graham Bell', uid='lex', passwrod='123lex', pfp='lex.png', kasm_server_needed=True)
+        u3 = User(name='Alexander Graham Bell', uid='lex', password='123lex', pfp='lex.png', kasm_server_needed=True)
         u4 = User(name='Grace Hopper', uid='hop', password='123hop', pfp='hop.png', kasm_server_needed=False)
         u5 = User(name='Fred Flintstone', uid='fred', pfp='fred.png', kasm_server_needed=True)
         users = [u1, u2, u3, u4, u5]

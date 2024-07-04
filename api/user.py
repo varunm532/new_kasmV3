@@ -1,10 +1,9 @@
-import json, jwt
 from flask import Blueprint, request, jsonify, current_app, Response, g
 from flask_restful import Api, Resource # used for REST API building
 from datetime import datetime
-from api.auth_middleware import token_required
-
-from model.users import User
+import jwt
+from api.jwt_authorize import token_required
+from model.user import User
 
 user_api = Blueprint('user_api', __name__,
                    url_prefix='/api')
@@ -151,6 +150,32 @@ class UserAPI:
             # 204 is the status code for delete with no json response
             return f"Deleted user: {json}", 204 # use 200 to test with Postman
          
+    class _Section(Resource):  # Section API operation
+        @token_required()
+        def get(self):
+            ''' Retrieve the current user from the token_required authentication check '''
+            current_user = g.current_user
+            ''' Return the current user as a json object '''
+            return jsonify(current_user.read_sections())
+       
+        @token_required() 
+        def post(self):
+            ''' Retrieve the current user from the token_required authentication check '''
+            current_user = g.current_user
+            
+            ''' Read data for json body '''
+            body = request.get_json()
+            
+            ''' Error checking '''
+            sections = body.get('sections')
+            if sections is None or len(sections) == 0:
+                return {'message': f"No sections to add were provided"}, 400
+            
+            ''' Add sections'''
+            if not current_user.add_sections(sections):
+                return {'message': f'1 or more sections failed to add, current {sections} requested {current_user.read_sections()}'}, 404
+            
+            return jsonify(current_user.read_sections())
     class _Security(Resource):
         def post(self):
             try:
@@ -181,10 +206,9 @@ class UserAPI:
                 if user:
                     try:
                         token = jwt.encode(
-                       {"_uid": user._uid},
-              #          {"role": user._role},
-                        current_app.config["SECRET_KEY"],
-                        algorithm="HS256"
+                            {"_uid": user._uid},
+                            current_app.config["SECRET_KEY"],
+                            algorithm="HS256"
                         )
                         resp = Response("Authentication for %s successful" % (user._uid))
                         resp.set_cookie(current_app.config["JWT_TOKEN_NAME"], 
@@ -211,12 +235,46 @@ class UserAPI:
                             }, 404
             except Exception as e:
                  return {
-                                    "message": "Something went wrong!",
-                                    "error": str(e),
-                                    "data": None
+                                "message": "Something went wrong!",
+                                "error": str(e),
+                                "data": None
                             }, 500
+                 
+        @token_required()
+        def delete(self):
+            ''' Invalidate the current user's token by setting its expiry to 0 '''
+            current_user = g.current_user
+            try:
+                # Generate a token with practically 0 age
+                token = jwt.encode(
+                    {"_uid": current_user._uid, 
+                     "exp": datetime.utcnow()},
+                    current_app.config["SECRET_KEY"],
+                    algorithm="HS256"
+                )
+                # You might want to log this action or take additional steps here
+                
+                # Prepare a response indicating the token has been invalidated
+                resp = Response("Token invalidated successfully")
+                resp.set_cookie(
+                    current_app.config["JWT_TOKEN_NAME"], 
+                    token,
+                    max_age=0,  # Immediately expire the cookie
+                    secure=True,
+                    httponly=True,
+                    path='/',
+                    samesite='None'
+                )
+                return resp
+            except Exception as e:
+                return {
+                    "message": "Failed to invalidate token",
+                    "error": str(e)
+                }, 500
 
     # building RESTapi endpoint
     api.add_resource(_ID, '/id')
-    api.add_resource(_CRUD, '/users')
+    api.add_resource(_CRUD, '/user')
+    api.add_resource(_Section, '/user/section') 
     api.add_resource(_Security, '/authenticate')          
+    
