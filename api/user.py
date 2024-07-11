@@ -34,13 +34,21 @@ class UserAPI:
             uid = body.get('uid')
             if uid is None or len(uid) < 2:
                 return {'message': f'User ID is missing, or is less than 2 characters'}, 400
+            # look for kasm_server_needed
+            kasm_server_needed = body.get('kasm_server_needed')
+            if kasm_server_needed is None:
+                kasm_server_needed = False
+            else:
+                kasm_server_needed = bool(kasm_server_needed)
+                
             # look for password and dob
             password = body.get('password')
             dob = body.get('dob')
 
             ''' #1: Key code block, setup USER OBJECT '''
             uo = User(name=name, 
-                      uid=uid)
+                      uid=uid,
+                      kasm_server_needed=kasm_server_needed)
             
             ''' Additional garbage error checking '''
             # set password if provided
@@ -89,30 +97,22 @@ class UserAPI:
             
             ''' Read data for json body '''
             body = request.get_json()
-           
-            ''' Find user '''
-            id = body.get('id')
-            if id is None:  # if id is not provided
-                return {
-                    "message": "User ID is required",
-                    "data": None,
-                    "error": "Bad request"
-                }, 400
-            ''' Get requested user from the database '''    
-            user = User.query.get(id)
-            if user is None:    # if user is not found
-                return {
-                    "message": f"User {id} not found",
-                    "data": None,
-                    "error": "Not found"
-                }, 404
+            
             ''' Check if user is owner or admin ''' 
-            if not (current_user.role == 'Admin' or current_user.id == user.id):
-                return {
-                        "message": "Insufficient permissions, user is not owner or admin.",
+            if (current_user.role == 'Admin'):
+                ''' Find user '''
+                uid = body.get('uid')
+                if uid is None:  # if id is not provided
+                    return {
+                        "message": "Admin requires a User ID to change",
                         "data": None,
-                        "error": "Unauthorized"
-                    }, 403
+                        "error": "Bad request"
+                    }, 400
+                user = User.query.filter_by(_uid=uid).first()
+                if user is None:
+                    return {'message': f'User {uid} not found'}, 404
+            else:
+                user = current_user
              
             ''' Update any fields that have data '''
             name = body.get('name')
@@ -121,7 +121,7 @@ class UserAPI:
                 
             uid = body.get('uid')
             if uid is not None and uid != '':
-                            user.uid = uid
+                user.uid = uid
                 
             dob = body.get('dob')   
             if dob is not None and dob != '':
@@ -133,6 +133,10 @@ class UserAPI:
                         "data": None,
                         "error": "Bad request",
                     }, 400
+                    
+            kasm_server_needed = body.get('kasm_server_needed')
+            if kasm_server_needed is not None:
+                user.kasm_server_needed = bool(kasm_server_needed)
 
             ''' Commit changes to the database '''
             user.update()
