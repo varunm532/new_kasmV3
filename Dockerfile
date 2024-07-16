@@ -12,7 +12,7 @@ RUN pip install gunicorn
 
 ENV GUNICORN_CMD_ARGS="--workers=1 --bind=0.0.0.0:8087"
 
-EXPOSE 8086
+EXPOSE 8087
 
 # Define environment variable
 ENV FLASK_ENV=production
