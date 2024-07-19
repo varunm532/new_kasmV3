@@ -330,6 +330,20 @@ class User(db.Model, UserMixin):
                 return None
             self.add_section(section_obj)
         return self
+    
+    def remove_sections(self, sections_to_remove):
+        try:
+            # Filter out the sections to be removed
+            for section_id in sections_to_remove:
+                section = next((section for section in self.sections if section.id == section_id), None)
+                if section:
+                    self.sections.remove(section)
+            db.session.commit()
+            return True
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error removing sections: {e}")
+            return False
 
 """Database Creation and Testing """
 
