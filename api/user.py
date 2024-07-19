@@ -180,6 +180,26 @@ class UserAPI:
                 return {'message': f'1 or more sections failed to add, current {sections} requested {current_user.read_sections()}'}, 404
             
             return jsonify(current_user.read_sections())
+        
+        @token_required()
+        def delete(self):
+            ''' Retrieve the current user from the token_required authentication check '''
+            current_user = g.current_user
+    
+            ''' Read data for json body '''
+            body = request.get_json()
+    
+            ''' Error checking '''
+            sections = body.get('sections')
+            if sections is None or len(sections) == 0:
+                return {'message': f"No sections to delete were provided"}, 400
+    
+            ''' Remove sections '''
+            if not current_user.remove_sections(sections):
+                return {'message': f'1 or more sections failed to delete, current {sections} requested {current_user.read_sections()}'}, 404
+    
+            return {'message': f'Sections {sections} deleted successfully'}, 200
+        
     class _Security(Resource):
         def post(self):
             try:
