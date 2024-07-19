@@ -331,21 +331,25 @@ class User(db.Model, UserMixin):
             self.add_section(section_obj)
         return self
     
-    def remove_sections(self, sections_to_remove):
+    def remove_sections(self, section_abbreviations):
         try:
-            # Filter out the sections to be removed
-            for section_id in sections_to_remove:
-                section = next((section for section in self.sections if section.id == section_id), None)
+            for abbreviation in section_abbreviations:
+                section = next((section for section in self.sections if section.abbreviation == abbreviation), None)
                 if section:
                     self.sections.remove(section)
+                else:
+                    raise ValueError(f"Section with abbreviation '{abbreviation}' not found.")
             db.session.commit()
             return True
+        except ValueError as e:
+            db.session.rollback()
+            print(e)  # Log the specific abbreviation error
+            return False
         except Exception as e:
             db.session.rollback()
-            print(f"Error removing sections: {e}")
+            print(f"Unexpected error removing sections: {e}")
             return False
-
-"""Database Creation and Testing """
+    """Database Creation and Testing """
 
 # Builds working data set for testing
 def initUsers():
