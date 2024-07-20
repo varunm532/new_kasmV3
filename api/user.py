@@ -1,4 +1,5 @@
-from flask import Blueprint, request, jsonify, current_app, Response, g
+import os
+from flask import Blueprint, app, request, jsonify, current_app, Response, g
 from flask_restful import Api, Resource # used for REST API building
 from datetime import datetime
 import jwt
@@ -91,18 +92,14 @@ class UserAPI:
             return jsonify(json_ready)
         
         @token_required() 
-        def put(self):  # Update method
-            # retrieve the current user from the token_required authentication check  
+        def put(self):
             current_user = g.current_user
-            
-            ''' Read data for json body '''
             body = request.get_json()
-            
-            ''' Check if user is owner or admin ''' 
-            if (current_user.role == 'Admin'):
-                ''' Find user '''
+    
+            # If the user is an admin, find the user to be updated by UID
+            if current_user.role == 'Admin':
                 uid = body.get('uid')
-                if uid is None:  # if id is not provided
+                if uid is None:
                     return {
                         "message": "Admin requires a User ID to change",
                         "data": None,
@@ -113,34 +110,46 @@ class UserAPI:
                     return {'message': f'User {uid} not found'}, 404
             else:
                 user = current_user
-             
-            ''' Update any fields that have data '''
+
+            # Preserve old UID for directory renaming
+            old_uid = user.uid
+
+            # Update user attributes
             name = body.get('name')
-            if name is not None and name != '':
+            if name:
                 user.name = name
-                
+
             uid = body.get('uid')
-            if uid is not None and uid != '':
+            if uid:
                 user.uid = uid
-                
-            dob = body.get('dob')   
-            if dob is not None and dob != '':
+
+            dob = body.get('dob')
+            if dob:
                 try:
                     user.dob = datetime.strptime(dob, '%Y-%m-%d').date()
-                except:
+                except ValueError:
                     return {
                         "message": f"Date of birth format error {dob}, must be yyyy-mm-dd",
                         "data": None,
-                        "error": "Bad request",
+                        "error": "Bad request"
                     }, 400
-                    
+
             kasm_server_needed = body.get('kasm_server_needed')
             if kasm_server_needed is not None:
                 user.kasm_server_needed = bool(kasm_server_needed)
 
-            ''' Commit changes to the database '''
+            # Save changes to the database
             user.update()
+
+            # Rename the user's directory if UID was changed
+            if old_uid != user.uid:
+                old_path = os.path.join(current_app.config['UPLOAD_FOLDER'], old_uid)
+                new_path = os.path.join(current_app.config['UPLOAD_FOLDER'], user.uid)
+                if os.path.exists(old_path):
+                    os.rename(old_path, new_path)
+
             return jsonify(user.read())
+
         
         @token_required("Admin")
         def delete(self): # Delete Method
