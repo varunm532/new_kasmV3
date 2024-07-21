@@ -1,4 +1,5 @@
-from flask import Blueprint, request, jsonify, current_app, Response, g
+import os
+from flask import Blueprint, app, request, jsonify, current_app, Response, g
 from flask_restful import Api, Resource # used for REST API building
 from datetime import datetime
 import jwt
@@ -90,56 +91,39 @@ class UserAPI:
             # return response, a json list of user dictionaries
             return jsonify(json_ready)
         
-        @token_required() 
-        def put(self):  # Update method
-            # retrieve the current user from the token_required authentication check  
+        @token_required()
+        def put(self):
             current_user = g.current_user
-            
-            ''' Read data for json body '''
             body = request.get_json()
-            
-            ''' Check if user is owner or admin ''' 
-            if (current_user.role == 'Admin'):
-                ''' Find user '''
+
+            if current_user.role == 'Admin':
                 uid = body.get('uid')
-                if uid is None:  # if id is not provided
-                    return {
-                        "message": "Admin requires a User ID to change",
-                        "data": None,
-                        "error": "Bad request"
-                    }, 400
+                if uid is None:
+                    return {"message": "Admin requires a User ID to change", "data": None, "error": "Bad request"}, 400
                 user = User.query.filter_by(_uid=uid).first()
                 if user is None:
                     return {'message': f'User {uid} not found'}, 404
             else:
                 user = current_user
-             
-            ''' Update any fields that have data '''
+
             name = body.get('name')
-            if name is not None and name != '':
+            if name:
                 user.name = name
-                
-            uid = body.get('uid')
-            if uid is not None and uid != '':
-                user.uid = uid
-                
-            dob = body.get('dob')   
-            if dob is not None and dob != '':
+
+            new_uid = body.get('uid')
+            dob = body.get('dob')
+            if dob:
                 try:
                     user.dob = datetime.strptime(dob, '%Y-%m-%d').date()
-                except:
-                    return {
-                        "message": f"Date of birth format error {dob}, must be yyyy-mm-dd",
-                        "data": None,
-                        "error": "Bad request",
-                    }, 400
-                    
+                except ValueError:
+                    return {"message": f"Date of birth format error {dob}, must be yyyy-mm-dd", "data": None, "error": "Bad request"}, 400
+
             kasm_server_needed = body.get('kasm_server_needed')
             if kasm_server_needed is not None:
                 user.kasm_server_needed = bool(kasm_server_needed)
 
-            ''' Commit changes to the database '''
-            user.update()
+            user.update_directory(new_uid=new_uid)
+
             return jsonify(user.read())
         
         @token_required("Admin")

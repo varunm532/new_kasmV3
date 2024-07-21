@@ -3,6 +3,7 @@ from random import randrange
 from datetime import date
 import os, base64
 import json
+from flask import current_app
 
 from flask_login import UserMixin
 
@@ -351,6 +352,21 @@ class User(db.Model, UserMixin):
             return False
     """Database Creation and Testing """
 
+    def update_directory(self, new_uid=None):
+        old_uid = self._uid
+        if new_uid:
+            self._uid = new_uid
+    
+        db.session.commit()
+
+        if old_uid != self._uid:
+            old_path = os.path.join(current_app.config['UPLOAD_FOLDER'], old_uid)
+            new_path = os.path.join(current_app.config['UPLOAD_FOLDER'], self._uid)
+            if os.path.exists(old_path):
+                os.rename(old_path, new_path)
+        return self
+
+    
 # Builds working data set for testing
 def initUsers():
     with app.app_context():
