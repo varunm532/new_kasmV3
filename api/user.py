@@ -91,65 +91,40 @@ class UserAPI:
             # return response, a json list of user dictionaries
             return jsonify(json_ready)
         
-        @token_required() 
+        @token_required()
         def put(self):
             current_user = g.current_user
             body = request.get_json()
-    
-            # If the user is an admin, find the user to be updated by UID
+
             if current_user.role == 'Admin':
                 uid = body.get('uid')
                 if uid is None:
-                    return {
-                        "message": "Admin requires a User ID to change",
-                        "data": None,
-                        "error": "Bad request"
-                    }, 400
+                    return {"message": "Admin requires a User ID to change", "data": None, "error": "Bad request"}, 400
                 user = User.query.filter_by(_uid=uid).first()
                 if user is None:
                     return {'message': f'User {uid} not found'}, 404
             else:
                 user = current_user
 
-            # Preserve old UID for directory renaming
-            old_uid = user.uid
-
-            # Update user attributes
             name = body.get('name')
             if name:
                 user.name = name
 
-            uid = body.get('uid')
-            if uid:
-                user.uid = uid
-
+            new_uid = body.get('uid')
             dob = body.get('dob')
             if dob:
                 try:
                     user.dob = datetime.strptime(dob, '%Y-%m-%d').date()
                 except ValueError:
-                    return {
-                        "message": f"Date of birth format error {dob}, must be yyyy-mm-dd",
-                        "data": None,
-                        "error": "Bad request"
-                    }, 400
+                    return {"message": f"Date of birth format error {dob}, must be yyyy-mm-dd", "data": None, "error": "Bad request"}, 400
 
             kasm_server_needed = body.get('kasm_server_needed')
             if kasm_server_needed is not None:
                 user.kasm_server_needed = bool(kasm_server_needed)
 
-            # Save changes to the database
-            user.update()
-
-            # Rename the user's directory if UID was changed
-            if old_uid != user.uid:
-                old_path = os.path.join(current_app.config['UPLOAD_FOLDER'], old_uid)
-                new_path = os.path.join(current_app.config['UPLOAD_FOLDER'], user.uid)
-                if os.path.exists(old_path):
-                    os.rename(old_path, new_path)
+            user.update_directory(new_uid=new_uid)
 
             return jsonify(user.read())
-
         
         @token_required("Admin")
         def delete(self): # Delete Method
