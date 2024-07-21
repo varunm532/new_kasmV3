@@ -1,6 +1,8 @@
 from flask import Blueprint, request, jsonify, current_app, Response, g
 from flask_restful import Api, Resource # used for REST API building
 from datetime import datetime
+import os
+from dotenv import load_dotenv
 import requests
 import jwt
 from api.jwt_authorize import token_required
@@ -8,6 +10,8 @@ from model.user import User
 
 user_api = Blueprint('user_api', __name__,
                    url_prefix='/api')
+
+load_dotenv()
 
 # API docs https://flask-restful.readthedocs.io/en/latest/api.html
 api = Api(user_api)
@@ -41,24 +45,32 @@ class UserAPI:
                 kasm_server_needed = False
             else:
                 kasm_server_needed = bool(kasm_server_needed)
-                print("Making kasm account for " + name)
-                kasm_server_url = 'kasm.nighthawkcodingsociety.com'
-                kasm_user_data = {
+                print("Creating user with name: " + name)
 
-                    "api_key":"{{api_key}}", # replace with actual key
-                    "api_key_secret": "{{api_key_secret}}", # replace with actual secret
+                #Check if password doesnt exist
+                if body.get('password') is None:
+                    return {'message': f'Password is missing'}, 400
+
+                kasm_url = os.getenv('KASM_SERVER') + "/api/public/create_user"
+                kasm_data = {
+                    "api_key": os.getenv('KASM_API_KEY'),
+                    "api_key_secret": os.getenv('KASM_API_KEY_SECRET'),
                     "target_user": {
-                        "username" : "test_user1@example.com", # replace with actual username
-                        "first_name" : "Bob", # replace with actual name
-                        "last_name" : "Williams", # replace with actual name
-                        "locked": 'false',
-                        "disabled": 'false',
-                        "organization": "example", # replace with actual org
-                        "phone": "123-456-7890", # replace with actual phone number or remove
-                        "password": "3UPKGg7g!a9g2@39v6" # replace with actual password
+                        "username" : body.get('uid'),
+                        "first_name" : body.get('name'),
+                        "last_name" : body.get('last_name'),
+                        "locked": False,
+                        "disabled": False,
+                        "organization": "All Users",
+                        "phone": "123-456-7890",
+                        "password": body.get('password'),
                     }
                 }
-
+                print(kasm_data)
+                print(kasm_url)
+                # send a post request to the kasm server
+                response = requests.post(kasm_url, json=kasm_data)
+                print(response)
                 
             # look for password and dob
             password = body.get('password')
