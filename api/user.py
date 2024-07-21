@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify, current_app, Response, g
 from flask_restful import Api, Resource # used for REST API building
 from datetime import datetime
+import requests
 import jwt
 from api.jwt_authorize import token_required
 from model.user import User
@@ -40,6 +41,24 @@ class UserAPI:
                 kasm_server_needed = False
             else:
                 kasm_server_needed = bool(kasm_server_needed)
+                print("Making kasm account for " + name)
+                kasm_server_url = 'kasm.nighthawkcodingsociety.com'
+                kasm_user_data = {
+
+                    "api_key":"{{api_key}}", # replace with actual key
+                    "api_key_secret": "{{api_key_secret}}", # replace with actual secret
+                    "target_user": {
+                        "username" : "test_user1@example.com", # replace with actual username
+                        "first_name" : "Bob", # replace with actual name
+                        "last_name" : "Williams", # replace with actual name
+                        "locked": 'false',
+                        "disabled": 'false',
+                        "organization": "example", # replace with actual org
+                        "phone": "123-456-7890", # replace with actual phone number or remove
+                        "password": "3UPKGg7g!a9g2@39v6" # replace with actual password
+                    }
+                }
+
                 
             # look for password and dob
             password = body.get('password')
