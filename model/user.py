@@ -11,10 +11,20 @@ from __init__ import app, db
 from sqlalchemy.exc import IntegrityError
 from werkzeug.security import generate_password_hash, check_password_hash
 
+""" Helper Functions """
 
-''' Tutorial: https://www.sqlalchemy.org/library.html#tutorials, try to get into Python shell and follow along '''
+def default_year():
+    """Returns the default year for user enrollment based on the current month."""
+    current_month = date.today().month
+    current_year = date.today().year
+    # If current month is between August (8) and December (12), the enrollment year is next year.
+    if 7 <= current_month <= 12:
+        current_year = current_year + 1
+    return current_year 
 
 """ Database Models """
+
+''' Tutorial: https://www.sqlalchemy.org/library.html#tutorials, try to get into Python shell and follow along '''
 
 class UserSection(db.Model):
     """ 
@@ -40,16 +50,7 @@ class UserSection(db.Model):
     def __init__(self, user, section):
         self.user = user
         self.section = section
-        self.set_year_based_on_enrollment()
-
-    def set_year_based_on_enrollment(self):
-        current_month = date.today().month
-        current_year = date.today().year
-        # If current month is between August (8) and December (12), the enrollment year is next year.
-        if 7 <= current_month <= 12:
-            self.year = current_year + 1
-        else:
-            self.year = current_year
+        self.year = default_year()
 
 # Define a many-to-many relationship to 'users' table
 class Section(db.Model):
@@ -285,7 +286,6 @@ class User(db.Model, UserMixin):
         db.session.commit()
         return None
     
-    
     def save_pfp(self, image_data, filename):
         """For saving profile picture."""
         try:
@@ -304,9 +304,6 @@ class User(db.Model, UserMixin):
         self.pfp = None
         db.session.commit()
         
-    def read_sections(self):
-        return { "sections": [section.read() for section in self.sections] if self.sections else None }
-    
     def add_section(self, section):
         # Query for the section using the provided abbreviation
         found = any(s.id == section.id for s in self.sections)
@@ -331,6 +328,43 @@ class User(db.Model, UserMixin):
                 return None
             self.add_section(section_obj)
         return self
+        
+    def read_sections(self):
+        """Reads the sections associated with the user."""
+        sections = []
+        # The user_sections backref provides access to the many-to-many relationship data 
+        if self.user_sections:
+            for user_section in self.user_sections:
+                # This user_section backref "row" can be used to access section methods 
+                section_data = user_section.section.read()
+                # Extract the year from the relationship data  
+                section_data['year'] = user_section.year  
+                sections.append(section_data)
+        return {"sections": sections} 
+    
+    def update_section(self, section_data):
+        """
+        Updates the year enrolled for a given section.
+
+        :param section_data: A dictionary containing the section's abbreviation and the new year.
+        :return: A boolean indicating if the update was successful.
+        """
+        abbreviation = section_data.get("abbreviation", None)
+        year = int(section_data.get("year", default_year()))  # Convert year to integer, default to 0 if not found
+
+        # Find the user_section that matches the provided abbreviation
+        section = next(
+            (s for s in self.user_sections if s.section.abbreviation == abbreviation),
+            None
+        )
+
+        if section:
+            # Update the year for the found section
+            section.year = year
+            db.session.commit()
+            return True  # Update successful
+        else:
+            return False  # Section not found
     
     def remove_sections(self, section_abbreviations):
         try:
@@ -350,7 +384,7 @@ class User(db.Model, UserMixin):
             db.session.rollback()
             print(f"Unexpected error removing sections: {e}")
             return False
-    """Database Creation and Testing """
+        
 
     def update_directory(self, new_uid=None):
         old_uid = self._uid
@@ -367,6 +401,8 @@ class User(db.Model, UserMixin):
         return self
 
     
+"""Database Creation and Testing """
+
 # Builds working data set for testing
 def initUsers():
     with app.app_context():
