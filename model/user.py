@@ -252,15 +252,17 @@ class User(db.Model, UserMixin):
     # CRUD read converts self to dictionary
     # returns dictionary
     def read(self):
-        return {
+        data = {
             "id": self.id,
             "name": self.name,
             "uid": self.uid,
             "role": self._role,
             "pfp": self._pfp,
             "kasm_server_needed": self.kasm_server_needed,
-            "sections": [section.read() for section in self.sections] if self.sections else None
         }
+        sections = self.read_sections()
+        data.update(sections)
+        return data
         
     # CRUD update: updates user name, password, phone
     # returns self
