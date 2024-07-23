@@ -166,6 +166,25 @@ class UserAPI:
             return jsonify(current_user.read_sections())
         
         @token_required()
+        def put(self):
+            ''' Retrieve the current user from the token_required authentication check '''
+            current_user = g.current_user
+
+            ''' Read data for json body '''
+            body = request.get_json()
+
+            ''' Error checking '''
+            section_data = body.get('section')
+            if not section_data:
+                return {'message': 'Section data is required'}, 400
+
+            ''' Update section year '''
+            if not current_user.update_section(section_data):
+                return {'message': f'Section {section_data.get("abbreviation")} not found or update failed'}, 404
+
+            return jsonify(current_user.read_sections())
+        
+        @token_required()
         def delete(self):
             ''' Retrieve the current user from the token_required authentication check '''
             current_user = g.current_user
