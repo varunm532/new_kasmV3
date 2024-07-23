@@ -101,7 +101,7 @@ class Stocks(db.Model):
 class StockUser(db.Model):
     __tablename__ = 'stockuser'
     id = db.Column(db.Integer, primary_key=True)
-    _user_id = db.Column(db.String(255), db.ForeignKey('users._uid', ondelete='CASCADE'), nullable=False)
+    _uid = db.Column(db.String(255), db.ForeignKey('users._uid', ondelete='CASCADE'), nullable=False)
     _stockmoney = db.Column(db.Integer, nullable=False)
     _accountdate = db.Column(db.Date)
 
@@ -111,18 +111,18 @@ class StockUser(db.Model):
     # 
     # users = db.relationship("User", backref=db.backref("stockuser", single_parent=True), lazy=True)
 
-    def __init__(self, user_id, stockmoney, accountdate):
-        self._user_id = user_id
+    def __init__(self, uid, stockmoney, accountdate):
+        self._uid = uid
         self._stockmoney = stockmoney
         self._accountdate = date.today()
 
     @property
-    def user_id(self):
-        return self._user_id
+    def uid(self):
+        return self._uid
 
-    @user_id.setter
-    def user_id(self, user_id):
-        self._user_id = user_id
+    @uid.setter
+    def user_id(self, uid):
+        self._uid = uid
 
     @property
     def stockmoney(self):
@@ -158,7 +158,7 @@ class StockUser(db.Model):
     def read(self):
         return {
             "id": self.id,
-            "user_id": self.user_id,
+            "uid": self.uid,
             "stockmoney": self.stockmoney,
             "accountdate": self._accountdate,
         }
@@ -166,13 +166,13 @@ class StockUser(db.Model):
     def get_balance(self,body):
         try:
             uid = body.get("uid")
-            return StockUser.query.filter(StockUser._user_id == uid).value(StockUser._stockmoney)
+            return StockUser.query.filter(StockUser._uid == uid).value(StockUser._stockmoney)
         except Exception as e:
                 return {"error": "Can't find user in StockUser table. Possible fix: Run /initilize first to log user in StockUser table"},500
     # return user id in the StockUser table
     def get_userid(self,uid):
         try:
-            return StockUser.query.filter(StockUser._user_id == uid).value(StockUser.id)
+            return StockUser.query.filter(StockUser._uid == uid).value(StockUser.id)
         except Exception as e:
                 return {"error": "Can't find user in StockUser table. Possible fix: Run /initilize first to log user in StockUser table"},500
 class Transactions(db.Model):
@@ -255,7 +255,7 @@ class Transactions(db.Model):
         quantity = body.get('quantity')
         transactiontype = 'buy'
         try:
-            user = StockUser.query.filter_by(_user_id = uid).first()
+            user = StockUser.query.filter_by(_uid = uid).first()
             stock_user = Transactions(user_id=user.id, transaction_type=transactiontype, transaction_date=date.today(),quantity=quantity)
             db.session.add(stock_user)
             db.session.commit()
