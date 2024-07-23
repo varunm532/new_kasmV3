@@ -177,6 +177,12 @@ class UserAPI:
             section_data = body.get('section')
             if not section_data:
                 return {'message': 'Section data is required'}, 400
+            
+            if not section_data.get('abbreviation'):
+                return {'message': 'Section abbreviation is required'}, 400
+            
+            if not section_data.get('year'):
+                return {'message': 'Section year is required'}, 400
 
             ''' Update section year '''
             if not current_user.update_section(section_data):
