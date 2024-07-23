@@ -4,7 +4,7 @@ from flask_restful import Api, Resource # used for REST API building
 from datetime import datetime
 
 from model.user import User
-from model.stocks import StockUser,Transactions,Stocks, User_Transaction_Stocks
+from model.stocks import StockUser,StockTransaction,TableStock, UserTransactionStock
 
 stock_api = Blueprint('stock_api', __name__,
                    url_prefix='/stock')
@@ -33,18 +33,30 @@ class StockAPI:
             quantity = body.get("quantity")
             symbol = body.get("symbol")
             uid = body.get("uid")
-            current_stock_price = Stocks.get_price(self,body)
+            current_stock_price = TableStock.get_price(self,body)
             value = quantity * current_stock_price
             bal = StockUser.get_balance(self,body)
             userid = StockUser.get_userid(self,uid)
-            stockid = Stocks.get_stockid(self,symbol)
-            u=Transactions.createlog_buy(self,body)
-            z= User_Transaction_Stocks.multilog_buy(self,body = body,value = value,transactionid=u)
+            stockid = TableStock.get_stockid(self,symbol)
+            u=StockTransaction.createlog_buy(self,body)
+            z= UserTransactionStock.multilog_buy(self,body = body,value = value,transactionid=u)
             print(str(z))
             print("this is transactionid" + str(u))
             print("this is user id" + str(userid))
             print("this is stockid" + str(stockid))
             
+    ##class _tranaction_buy(Resource):
+    ##    def post(self):
+    ##        body = request.get_json()
+    ##        userbal = StockUser.get_balance(self,body)
+    ##        stockval = TableStock.get_price(self,body)
+    ##        quantity = body.get("quantity")
+    ##        transactionval = quantity * stockval
+    ##        if userbal >= transactionval:
+    ##            # update user bal
+    ##            StockUser.updatebal(self,body,transactionval)
+                
+                
             
 
     class _transaction_sell(Resource):
