@@ -93,24 +93,34 @@ class UserAPI:
         
         @token_required()
         def put(self):
+            ''' Retrieve the current user from the token_required authentication check '''
             current_user = g.current_user
+            ''' Read data from the JSON body of the request '''
             body = request.get_json()
 
+            ''' Admin-specific update handling '''
             if current_user.role == 'Admin':
+                # Admin requires a User ID to change other users' details
                 uid = body.get('uid')
                 if uid is None:
                     return {"message": "Admin requires a User ID to change", "data": None, "error": "Bad request"}, 400
+                # Find the user by UID
                 user = User.query.filter_by(_uid=uid).first()
                 if user is None:
                     return {'message': f'User {uid} not found'}, 404
             else:
+                # Non-admin users can only update their own details
                 user = current_user
 
+            ''' Update user details if provided '''
+            # Update name if provided in the request body
             name = body.get('name')
             if name:
                 user.name = name
 
+            # Update UID if provided in the request body
             new_uid = body.get('uid')
+            # Update date of birth if provided in the request body
             dob = body.get('dob')
             if dob:
                 try:
@@ -118,12 +128,15 @@ class UserAPI:
                 except ValueError:
                     return {"message": f"Date of birth format error {dob}, must be yyyy-mm-dd", "data": None, "error": "Bad request"}, 400
 
+            # Update Kasm server requirement if provided in the request body
             kasm_server_needed = body.get('kasm_server_needed')
             if kasm_server_needed is not None:
                 user.kasm_server_needed = bool(kasm_server_needed)
 
+            ''' Update directory if UID changes '''
             user.update_directory(new_uid=new_uid)
 
+            ''' Return the updated user details as a JSON object '''
             return jsonify(user.read())
         
         @token_required("Admin")
