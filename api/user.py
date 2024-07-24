@@ -20,7 +20,28 @@ class UserAPI:
             current_user = g.current_user
             ''' Return the current user as a json object '''
             return jsonify(current_user.read())
-         
+    
+    class _BULK(Resource):  # Users API operation for Create, Read, Update, Delete 
+        def post(self):
+            ''' Handle bulk user creation by sending POST requests to the single user endpoint '''
+            users = request.get_json()
+            
+            if not isinstance(users, list):
+                return {'message': 'Expected a list of user data'}, 400
+            
+            results = {'success': [], 'errors': []}
+            
+            with current_app.test_client() as client:
+                for user in users:
+                    # Simulate a POST request to the single user creation endpoint
+                    response = client.post('/api/user', json=user)
+                    
+                    if response.status_code == 200:  # Assuming success status code is 200
+                        results['success'].append(response.get_json())
+                    else:
+                        results['errors'].append(response.get_json())
+            
+            return jsonify(results)     
     class _CRUD(Resource):  # Users API operation for Create, Read, Update, Delete 
         def post(self): # Create method
             ''' Read data for json body '''
@@ -320,6 +341,7 @@ class UserAPI:
 
     # building RESTapi endpoint
     api.add_resource(_ID, '/id')
+    api.add_resource(_BULK, '/users')
     api.add_resource(_CRUD, '/user')
     api.add_resource(_Section, '/user/section') 
     api.add_resource(_Security, '/authenticate')          
