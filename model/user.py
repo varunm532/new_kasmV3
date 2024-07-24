@@ -10,6 +10,8 @@ from flask_login import UserMixin
 from __init__ import app, db
 from sqlalchemy.exc import IntegrityError
 from werkzeug.security import generate_password_hash, check_password_hash
+from model.stocks import StockUser
+
 
 """ Helper Functions """
 
@@ -144,6 +146,8 @@ class User(db.Model, UserMixin):
     # Relationship to manage the association between users and sections
     sections = db.relationship('Section', secondary=UserSection.__table__, lazy='subquery',
                                backref=db.backref('users', lazy=True))
+    stock_user = db.relationship("StockUser", backref=db.backref("users", cascade="all"), lazy=True,uselist=False)
+
 
     # Constructor of a User object, initializes the instance variables within object (self)
     def __init__(self, name, uid, password="123qwerty", kasm_server_needed=False, role="User", pfp=''):
@@ -435,6 +439,16 @@ class User(db.Model, UserMixin):
         # Return the updated user object
         return self
 
+    def add_stockuser(self, uid):
+        user = User.query.filter_by(_uid=uid).first()
+        if user:
+            found = user.stock_user is not None
+            if not found:
+                stock_user = StockUser(uid=user.uid, stockmoney=100000, accountdate=date.today())
+                db.session.add(stock_user)
+                db.session.commit()
+            else:
+                print(f"StockUser for user {uid} already exists.")
     
 """Database Creation and Testing """
 
