@@ -324,11 +324,22 @@ class User(db.Model, UserMixin):
         return self
     
     def add_sections(self, sections):
+        """
+        Add multiple sections to the user's profile.
+
+        :param sections: A list of section abbreviations to be added.
+        :return: The user object with the added sections, or None if any section is not found.
+        """
+        # Iterate over each section abbreviation provided
         for section in sections:
+            # Query the Section model to find the section object by its abbreviation
             section_obj = Section.query.filter_by(_abbreviation=section).first()
+            # If the section is not found, return None
             if not section_obj:
                 return None
+            # Add the found section object to the user's profile
             self.add_section(section_obj)
+        # Return the user object with the added sections
         return self
         
     def read_sections(self):
@@ -369,37 +380,59 @@ class User(db.Model, UserMixin):
             return False  # Section not found
     
     def remove_sections(self, section_abbreviations):
+        """
+        Remove sections based on provided abbreviations.
+
+        :param section_abbreviations: A list of section abbreviations to be removed.
+        :return: True if all sections are removed successfully, False otherwise.
+        """
         try:
+            # Iterate over each abbreviation in the provided list
             for abbreviation in section_abbreviations:
+                # Find the section matching the current abbreviation
                 section = next((section for section in self.sections if section.abbreviation == abbreviation), None)
                 if section:
+                    # If the section is found, remove it from the list of sections
                     self.sections.remove(section)
                 else:
+                    # If the section is not found, raise a ValueError
                     raise ValueError(f"Section with abbreviation '{abbreviation}' not found.")
             db.session.commit()
             return True
         except ValueError as e:
+            # Roll back the transaction if a ValueError is encountered
             db.session.rollback()
             print(e)  # Log the specific abbreviation error
             return False
         except Exception as e:
+            # Roll back the transaction if any other exception is encountered
             db.session.rollback()
-            print(f"Unexpected error removing sections: {e}")
+            print(f"Unexpected error removing sections: {e}") # Log the unexpected error
             return False
         
-
     def update_directory(self, new_uid=None):
+        """
+        Update the user's directory based on the new UID provided.
+
+        :param new_uid: Optional new UID to update the user's directory.
+        :return: The updated user object.
+        """
+        # Store the old UID for later comparison
         old_uid = self._uid
+        # Update the UID if a new one is provided
         if new_uid:
             self._uid = new_uid
-    
+
+        # Commit the UID change to the database
         db.session.commit()
 
+        # If the UID has changed, update the directory name
         if old_uid != self._uid:
             old_path = os.path.join(current_app.config['UPLOAD_FOLDER'], old_uid)
             new_path = os.path.join(current_app.config['UPLOAD_FOLDER'], self._uid)
             if os.path.exists(old_path):
                 os.rename(old_path, new_path)
+        # Return the updated user object
         return self
 
     
