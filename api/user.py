@@ -41,7 +41,8 @@ class UserAPI:
                     else:
                         results['errors'].append(response.get_json())
             
-            return jsonify(results)     
+            return jsonify(results) 
+            
     class _CRUD(Resource):  # Users API operation for Create, Read, Update, Delete 
         def post(self): # Create method
             ''' Read data for json body '''
@@ -86,11 +87,16 @@ class UserAPI:
             ''' #2: Key Code block to add user to database '''
             # create user in database
             user = uo.create()
+            if not user: # failure returns error message
+                return {'message': f'Processed {name}, either a format error or User ID {uid} is duplicate'}, 400
+            
+            # Process sections if provided
+            if body.get('sections'):
+                uo.add_sections(body.get('sections'))
+
             # success returns json of user
-            if user:
-                return jsonify(user.read())
-            # failure returns error
-            return {'message': f'Processed {name}, either a format error or User ID {uid} is duplicate'}, 400
+            return jsonify(user.read())
+            
 
         @token_required()
         def get(self):
