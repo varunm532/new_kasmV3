@@ -26,24 +26,7 @@ class StockAPI:
             print(str(u))
     # not final,  used to test if major db changes work
     # contains no logic for project yet
-    class _transaction_buy1(Resource):
-        def post(self):
-            body = request.get_json()
-            
-            quantity = body.get("quantity")
-            symbol = body.get("symbol")
-            uid = body.get("uid")
-            current_stock_price = TableStock.get_price(self,body)
-            value = quantity * current_stock_price
-            bal = StockUser.get_balance(self,body)
-            userid = StockUser.get_userid(self,uid)
-            stockid = TableStock.get_stockid(self,symbol)
-            u=StockTransaction.createlog_buy(self,body)
-            z= UserTransactionStock.multilog_buy(self,body = body,value = value,transactionid=u)
-            print(str(z))
-            print("this is transactionid" + str(u))
-            print("this is user id" + str(userid))
-            print("this is stockid" + str(stockid))
+
             
     class _tranaction_buy(Resource):
         def post(self):
@@ -63,17 +46,30 @@ class StockAPI:
                 TableStock.updatequantity(self,body,isbuy)
             else:
                 return jsonify({'error': 'Insufficient funds'}), 400
-                
+    class _transaction_sell(Resource):
+        def post(self):
+            body = request.get_json()
+            symbol = body.get("symbol")
+            stockintransaction = UserTransactionStock.check_stock(self,body)
+            if stockintransaction == True:
+                print("this works")
+            else:
+                return jsonify({'error':'No stock to sell'}), 400
+    class _Account_expirary(Resource):
+        def post(self):
+            body= request.get_json()
+            accountdate = StockUser.check_expire(self,body)
+            print(f"this is accountdate: {accountdate}")
+            return jsonify(accountdate)
 
                 
                 
                 
             
 
-    class _transaction_sell(Resource):
-        def post(self):
-            body = request.get_json()
+    
     api.add_resource(_initilize_user, '/initilize')
     api.add_resource(_tranaction_buy, '/buy')
     api.add_resource(_transaction_sell, '/sell')
+    api.add_resource(_Account_expirary, '/expire')
 

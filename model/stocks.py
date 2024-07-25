@@ -8,6 +8,7 @@ from flask_login import UserMixin
 from __init__ import app, db
 from sqlalchemy.exc import IntegrityError
 from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import datetime, timedelta
 #from model.user import User
 
 class TableStock(db.Model):
@@ -198,7 +199,28 @@ class StockUser(db.Model):
         x.stockmoney = newbal
         db.session.commit()
         return print("account balance updated")
-
+    def check_expire(self, body):
+        uid = body.get("uid")
+        accountdate = StockUser.query.filter(StockUser._uid == uid).value(StockUser._accountdate)
+        
+        if accountdate is not None:
+            # Convert accountdate to datetime object
+            account_datetime = datetime.combine(accountdate, datetime.min.time())
+            
+            # Add 6 weeks to the accountdate
+            expire_date = account_datetime + timedelta(weeks=6)
+            
+            # Get the current date and time
+            current_datetime = datetime.now()
+            
+            # Check if the account has expired
+            if current_datetime > expire_date:
+                return True  # Account has expired
+            else:
+                return False  # Account is still valid
+        else:
+            # Handle the case where accountdate is None
+            return None  # or raise an exception or handle appropriately
 class StockTransaction(db.Model):
     __tablename__ = 'stock_transactions'
 
@@ -422,3 +444,11 @@ class UserTransactionStock(db.Model):
                 db.session.commit()
             else:
                 print("error: transaction log has not been created yet")
+    def check_stock(self,body):
+        symbol = body.get("symbol")
+        stockid = TableStock.get_stockid(self,symbol)
+        try:
+            UserTransactionStock.query.filter(_stock_id = stockid)
+            return True
+        except Exception as e:
+            return {e}
