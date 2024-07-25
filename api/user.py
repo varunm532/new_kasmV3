@@ -40,6 +40,17 @@ class UserAPI:
                         results['success'].append(response.get_json())
                     else:
                         results['errors'].append(response.get_json())
+                
+                for user in users:
+                    uid = user.get('uid')
+                    uo = User.query.filter_by(_uid=uid).first()
+                    # Process sections if provided
+                    if uo is not None:
+                        abbreviations = [section["abbreviation"] for section in user.get('sections', [])]
+                        if len(abbreviations) > 0:  # Check if the list is not empty
+                            so = uo.add_sections(abbreviations)
+                            if so is None:
+                                results['errors'].append({'message': f'Failed to add sections {abbreviations} to user {uid}'})
             
             return jsonify(results) 
             
@@ -64,7 +75,7 @@ class UserAPI:
             else:
                 kasm_server_needed = bool(kasm_server_needed)
                 
-            # look for password and dob
+            # look for additional fields 
             password = body.get('password')
             dob = body.get('dob')
 
@@ -90,10 +101,6 @@ class UserAPI:
             if not user: # failure returns error message
                 return {'message': f'Processed {name}, either a format error or User ID {uid} is duplicate'}, 400
             
-            # Process sections if provided
-            if body.get('sections'):
-                uo.add_sections(body.get('sections'))
-
             # success returns json of user
             return jsonify(user.read())
             
