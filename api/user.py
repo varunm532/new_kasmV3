@@ -1,4 +1,5 @@
 import os
+import time
 from flask import Blueprint, app, request, jsonify, current_app, Response, g
 from flask_restful import Api, Resource # used for REST API building
 from datetime import datetime
@@ -29,19 +30,20 @@ class UserAPI:
             if not isinstance(users, list):
                 return {'message': 'Expected a list of user data'}, 400
             
-            results = {'success': [], 'errors': []}
+            results = {'errors': []}
             
             with current_app.test_client() as client:
                 for user in users:
+                    # Introduce a small delay to avoid overwhelming the database
+                    time.sleep(0.1)
+                    
                     # Simulate a POST request to the single user creation endpoint
                     response = client.post('/api/user', json=user)
                     
-                    if response.status_code == 200:  # Assuming success status code is 200
-                        results['success'].append(response.get_json())
-                    else:
+                    if response.status_code != 200:  # Assuming success status code is 200
                         results['errors'].append(response.get_json())
+                        continue
                 
-                for user in users:
                     uid = user.get('uid')
                     uo = User.query.filter_by(_uid=uid).first()
                     # Process sections if provided
