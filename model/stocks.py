@@ -90,9 +90,21 @@ class TableStock(db.Model):
             return TableStock.query.filter(TableStock._symbol == symbol).value(TableStock.id)
         except Exception as e:
             return {"error": "No such stock exists"},500
+    def updatequantity(self,body,isbuy):
+        if isbuy == True:
+            quantity = body.get("quantity")
+            symbol = body.get("symbol")
+            currentquantity = TableStock.query.filter(TableStock._symbol == symbol).value(TableStock._quantity)
+            newquantity = currentquantity - quantity
+            idnum = TableStock.query.filter(TableStock._symbol==symbol).value(TableStock.id)
+            x= TableStock.query.get(idnum)
+            print("this is x" + str(x))
+            x.update(quantity = newquantity)
+            return print("updated quanity")
+        
     def read(self):
         return {
-            "id": self.stock_id,
+            "id": self.id,
             "symbol": self.symbol,
             "company": self.company,
             "quantity": self.quantity,
