@@ -1,7 +1,6 @@
-# init_db.py
+# db_init.py
 
-from __init__ import app, db
-from model.user import initUsers
+from main import app, db, initUsers
 
 # Ensure the app context is available
 with app.app_context():
