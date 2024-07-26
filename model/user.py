@@ -447,8 +447,10 @@ class User(db.Model, UserMixin):
                 stock_user = StockUser(uid=user.uid, stockmoney=100000, accountdate=date.today())
                 db.session.add(stock_user)
                 db.session.commit()
+                return True
             else:
                 print(f"StockUser for user {uid} already exists.")
+                return False
     
 """Database Creation and Testing """
 

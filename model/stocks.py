@@ -9,6 +9,8 @@ from __init__ import app, db
 from sqlalchemy.exc import IntegrityError
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
+from dateutil.relativedelta import relativedelta
+
 #from model.user import User
 
 class TableStock(db.Model):
@@ -199,6 +201,7 @@ class StockUser(db.Model):
         x.stockmoney = newbal
         db.session.commit()
         return print("account balance updated")
+    
     def check_expire(self, body):
         uid = body.get("uid")
         accountdate = StockUser.query.filter(StockUser._uid == uid).value(StockUser._accountdate)
@@ -299,6 +302,22 @@ class StockTransaction(db.Model):
             "transaction_date": self._transaction_date
         }
     # creates buy log in transaction table
+    def createlog_initialbuy(self,body):
+        uid = body.get("uid")
+        quantity = body.get("quantity")
+        transactiontype = 'buy'
+        try:
+            user = StockUser.query.filter_by(_uid = uid).first()
+            current_date = date.today()
+# Subtract one year from the current date
+            new_date = current_date - relativedelta(years=1)
+            stock_user = StockTransaction(user_id=user.id, transaction_type=transactiontype, transaction_date=new_date,quantity=quantity)
+            db.session.add(stock_user)
+            db.session.commit()
+            return stock_user.id
+        except Exception as e:
+            return {"error": "account has not been autocreated for stock game. Run /initilize first to log user in StockUser table"},500
+        
     def createlog_buy(self,body):
         uid = body.get('uid')
         quantity = body.get('quantity')

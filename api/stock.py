@@ -23,10 +23,32 @@ class StockAPI:
             body = request.get_json()
             uid = body.get('uid')
             u = User.add_stockuser(self,uid)
-            print(str(u))
+            if u == True:
+                return jsonify("Account has been created")
+            else:
+                return jsonify("Account already exists or something has gone wrong")
     # not final,  used to test if major db changes work
     # contains no logic for project yet
-
+    class _initial_stockbuy(Resource):
+        def post(self):
+            body = request.get_json()
+            body = request.get_json()
+            userbal = StockUser.get_balance(self,body)
+            stockval = TableStock.get_price(self,body)
+            quantity = body.get("quantity")
+            isbuy = True
+            transactionval = quantity * stockval
+            if userbal >= transactionval:
+                # update user bal
+                StockUser.updatebal(self,body,transactionval)
+                # create stocktransacotin log
+                u=StockTransaction.createlog_initialbuy(self,body)
+                UserTransactionStock.multilog_buy(self,body = body,value = transactionval,transactionid=u)
+                # update stock quantity
+                TableStock.updatequantity(self,body,isbuy)
+            else:
+                return jsonify({'error': 'Insufficient funds'}), 400
+            
             
     class _tranaction_buy(Resource):
         def post(self):
@@ -72,4 +94,5 @@ class StockAPI:
     api.add_resource(_tranaction_buy, '/buy')
     api.add_resource(_transaction_sell, '/sell')
     api.add_resource(_Account_expirary, '/expire')
+    api.add_resource(_initial_stockbuy, '/initialbuy')
 
