@@ -3,12 +3,18 @@ import time
 from flask import Blueprint, app, request, jsonify, current_app, Response, g
 from flask_restful import Api, Resource # used for REST API building
 from datetime import datetime
+import os
+from dotenv import load_dotenv
+import requests
 import jwt
 from api.jwt_authorize import token_required
 from model.user import User
+from model.kasm import CreateUser
 
 user_api = Blueprint('user_api', __name__,
                    url_prefix='/api')
+
+load_dotenv()
 
 # API docs https://flask-restful.readthedocs.io/en/latest/api.html
 api = Api(user_api)
@@ -64,6 +70,7 @@ class UserAPI:
             ''' Avoid garbage in, error checking '''
             # validate name
             name = body.get('name')
+            passwor = body.get('password')
             if name is None or len(name) < 2:
                 return {'message': f'Name is missing, or is less than 2 characters'}, 400
             # validate uid
@@ -76,6 +83,7 @@ class UserAPI:
                 kasm_server_needed = False
             else:
                 kasm_server_needed = bool(kasm_server_needed)
+                CreateUser().post(name, uid, password)
                 
             # look for additional fields 
             password = body.get('password')
