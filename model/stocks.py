@@ -8,6 +8,9 @@ from flask_login import UserMixin
 from __init__ import app, db
 from sqlalchemy.exc import IntegrityError
 from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import datetime, timedelta
+from dateutil.relativedelta import relativedelta
+
 #from model.user import User
 
 class TableStock(db.Model):
@@ -90,9 +93,33 @@ class TableStock(db.Model):
             return TableStock.query.filter(TableStock._symbol == symbol).value(TableStock.id)
         except Exception as e:
             return {"error": "No such stock exists"},500
+    def updatequantity(self,body,isbuy):
+        if isbuy == True:
+            quantity = body.get("quantity")
+            symbol = body.get("symbol")
+            currentquantity = TableStock.query.filter(TableStock._symbol == symbol).value(TableStock._quantity)
+            newquantity = currentquantity - quantity
+            idnum = TableStock.query.filter(TableStock._symbol==symbol).value(TableStock.id)
+            x= TableStock.query.get(idnum)
+            print("this is x" + str(x))
+            x.update(quantity = newquantity)
+            return print("updated quanity")
+    def updatestockprice(self,body = None,isloop = None,latest_price = None,stock = None, topstock = None):
+    #symbol = body.get('symbol')
+    # updates stock price 
+        if topstock == True:
+            return TableStock.query.offset(0).limit(26).all()
+        if isloop == False:
+            return TableStock.query.all()
+        elif isloop == True:
+            stock.sheesh = latest_price
+            price = stock.sheesh
+            db.session.commit()
+            return price
+        
     def read(self):
         return {
-            "id": self.stock_id,
+            "id": self.id,
             "symbol": self.symbol,
             "company": self.company,
             "quantity": self.quantity,
@@ -186,7 +213,29 @@ class StockUser(db.Model):
         x.stockmoney = newbal
         db.session.commit()
         return print("account balance updated")
-
+    
+    def check_expire(self, body):
+        uid = body.get("uid")
+        accountdate = StockUser.query.filter(StockUser._uid == uid).value(StockUser._accountdate)
+        
+        if accountdate is not None:
+            # Convert accountdate to datetime object
+            account_datetime = datetime.combine(accountdate, datetime.min.time())
+            
+            # Add 6 weeks to the accountdate
+            expire_date = account_datetime + timedelta(weeks=6)
+            
+            # Get the current date and time
+            current_datetime = datetime.now()
+            
+            # Check if the account has expired
+            if current_datetime > expire_date:
+                return True  # Account has expired
+            else:
+                return False  # Account is still valid
+        else:
+            # Handle the case where accountdate is None
+            return None  # or raise an exception or handle appropriately
 class StockTransaction(db.Model):
     __tablename__ = 'stock_transactions'
 
@@ -265,6 +314,22 @@ class StockTransaction(db.Model):
             "transaction_date": self._transaction_date
         }
     # creates buy log in transaction table
+    def createlog_initialbuy(self,body):
+        uid = body.get("uid")
+        quantity = body.get("quantity")
+        transactiontype = 'buy'
+        try:
+            user = StockUser.query.filter_by(_uid = uid).first()
+            current_date = date.today()
+# Subtract one year from the current date
+            new_date = current_date - relativedelta(years=1)
+            stock_user = StockTransaction(user_id=user.id, transaction_type=transactiontype, transaction_date=new_date,quantity=quantity)
+            db.session.add(stock_user)
+            db.session.commit()
+            return stock_user.id
+        except Exception as e:
+            return {"error": "account has not been autocreated for stock game. Run /initilize first to log user in StockUser table"},500
+        
     def createlog_buy(self,body):
         uid = body.get('uid')
         quantity = body.get('quantity')
@@ -410,3 +475,11 @@ class UserTransactionStock(db.Model):
                 db.session.commit()
             else:
                 print("error: transaction log has not been created yet")
+    def check_stock(self,body):
+        symbol = body.get("symbol")
+        stockid = TableStock.get_stockid(self,symbol)
+        try:
+            UserTransactionStock.query.filter(_stock_id = stockid)
+            return True
+        except Exception as e:
+            return {e}

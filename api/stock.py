@@ -2,7 +2,7 @@ import json, jwt
 from flask import Blueprint, request, jsonify, current_app, Response, g
 from flask_restful import Api, Resource # used for REST API building
 from datetime import datetime
-
+import requests
 from model.user import User
 from model.stocks import StockUser,StockTransaction,TableStock, UserTransactionStock
 
@@ -18,51 +18,118 @@ All db change are found in the model/user.py file"""
 class StockAPI:
     # used to create a user log to stockuser table
     # Supposed to be called when user first starts
+    class _Singleupdata(Resource):
+        def post(self):
+            #updates stock price:
+            body = request.get_json()
+            symbol = body.get("symbol")
+            isloop = False
+            api_key = 'xAxPbodLC12nNCwa5gHiK6YZVQecllPA'  # Replace with your FMP API key
+            url = f'https://financialmodelingprep.com/api/v3/quote/{symbol}?apikey={api_key}'
+            stocks = TableStock.updatestockprice(self,body,isloop)
+            response = requests.get(url)
+            for stock in stocks:
+                if stock.symbol == symbol:
+                    
+                    if response.status_code == 200:
+                        data = response.json()
+                        
+                        if data:  # Check if the list is not empty
+                            latest_price = data[0].get('price')
+                            # Use .get() to avoid KeyError
+                            if latest_price is not None:
+                                print("this is stock:" + str(stock))
+                                isloop = True
+                                price = TableStock.updatestockprice(self,body,isloop,latest_price,stock)
+                                print(f"Updated price for {symbol} to {latest_price}")
+                            else:
+                                print(f"Price data not found for {symbol}")
+                        else:
+                            print(f"Empty data for {symbol}")
+                    else:
+                        print(f"Failed to fetch data for {symbol}. Status code: {response.status_code}")
+                    print("this is new price" +  str(price))
+                    data = jsonify(str(price))
+                    print("this is data" + str(data))
+            return data         
     class _initilize_user(Resource):
         def post(self):
             body = request.get_json()
             uid = body.get('uid')
             u = User.add_stockuser(self,uid)
-            print(str(u))
+            if u == True:
+                return jsonify("Account has been created")
+            else:
+                return jsonify("Account already exists or something has gone wrong")
     # not final,  used to test if major db changes work
     # contains no logic for project yet
-    class _transaction_buy(Resource):
+    class _initial_stockbuy(Resource):
         def post(self):
             body = request.get_json()
-            
+            body = request.get_json()
+            userbal = StockUser.get_balance(self,body)
+            stockval = TableStock.get_price(self,body)
             quantity = body.get("quantity")
-            symbol = body.get("symbol")
-            uid = body.get("uid")
-            current_stock_price = TableStock.get_price(self,body)
-            value = quantity * current_stock_price
-            bal = StockUser.get_balance(self,body)
-            userid = StockUser.get_userid(self,uid)
-            stockid = TableStock.get_stockid(self,symbol)
-            u=StockTransaction.createlog_buy(self,body)
-            z= UserTransactionStock.multilog_buy(self,body = body,value = value,transactionid=u)
-            print(str(z))
-            print("this is transactionid" + str(u))
-            print("this is user id" + str(userid))
-            print("this is stockid" + str(stockid))
+            isbuy = True
+            transactionval = quantity * stockval
+            if userbal >= transactionval:
+                # update user bal
+                StockUser.updatebal(self,body,transactionval)
+                # create stocktransacotin log
+                u=StockTransaction.createlog_initialbuy(self,body)
+                UserTransactionStock.multilog_buy(self,body = body,value = transactionval,transactionid=u)
+                # update stock quantity
+                TableStock.updatequantity(self,body,isbuy)
+                return jsonify("Transaction successful")
+            else:
+                return jsonify({'error': 'Insufficient funds'}), 400
             
-    ##class _tranaction_buy(Resource):
-    ##    def post(self):
-    ##        body = request.get_json()
-    ##        userbal = StockUser.get_balance(self,body)
-    ##        stockval = TableStock.get_price(self,body)
-    ##        quantity = body.get("quantity")
-    ##        transactionval = quantity * stockval
-    ##        if userbal >= transactionval:
-    ##            # update user bal
-    ##            StockUser.updatebal(self,body,transactionval)
+            
+    class _tranaction_buy(Resource):
+        def post(self):
+            body = request.get_json()
+            userbal = StockUser.get_balance(self,body)
+            stockval = TableStock.get_price(self,body)
+            quantity = body.get("quantity")
+            isbuy = True
+            transactionval = quantity * stockval
+            if userbal >= transactionval:
+                # update user bal
+                StockUser.updatebal(self,body,transactionval)
+                # create stocktransacotin log
+                u=StockTransaction.createlog_buy(self,body)
+                UserTransactionStock.multilog_buy(self,body = body,value = transactionval,transactionid=u)
+                # update stock quantity
+                TableStock.updatequantity(self,body,isbuy)
+                return jsonify("Transaction successful")
+            else:
+                return jsonify({'error': 'Insufficient funds'}), 400
+    class _transaction_sell(Resource):
+        def post(self):
+            body = request.get_json()
+            symbol = body.get("symbol")
+            stockintransaction = UserTransactionStock.check_stock(self,body)
+            if stockintransaction == True:
+                print("this works")
+            else:
+                return jsonify({'error':'No stock to sell'}), 400
+    class _Account_expirary(Resource):
+        def post(self):
+            body= request.get_json()
+            accountdate = StockUser.check_expire(self,body)
+            print(f"this is accountdate: {accountdate}")
+            return jsonify(accountdate)
+
+                
                 
                 
             
 
-    class _transaction_sell(Resource):
-        def post(self):
-            body = request.get_json()
+    
     api.add_resource(_initilize_user, '/initilize')
-    api.add_resource(_transaction_buy, '/buy')
+    api.add_resource(_tranaction_buy, '/buy')
     api.add_resource(_transaction_sell, '/sell')
+    api.add_resource(_Account_expirary, '/expire')
+    api.add_resource(_initial_stockbuy, '/initialbuy')
+    api.add_resource(_Singleupdata,'/singleupdate')
 
