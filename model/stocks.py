@@ -104,6 +104,18 @@ class TableStock(db.Model):
             print("this is x" + str(x))
             x.update(quantity = newquantity)
             return print("updated quanity")
+    def updatestockprice(self,body = None,isloop = None,latest_price = None,stock = None, topstock = None):
+    #symbol = body.get('symbol')
+    # updates stock price 
+        if topstock == True:
+            return TableStock.query.offset(0).limit(26).all()
+        if isloop == False:
+            return TableStock.query.all()
+        elif isloop == True:
+            stock.sheesh = latest_price
+            price = stock.sheesh
+            db.session.commit()
+            return price
         
     def read(self):
         return {
