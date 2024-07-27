@@ -66,16 +66,13 @@ class UserAPI:
                     return {'message': f'Date of birth format error {dob}, must be mm-dd-yyyy'}, 400
             
             ''' #2: Key Code block to add user to database '''
-            # create user in database
             user = uo.create()
+            if not user: # failure returns error message
+                return {'message': f'Processed {name}, either a format error or User ID {uid} is duplicate'}, 400
+            
             # success returns json of user
-            if user:
-                #assume that user was successfully created, then check for kasm needed
-                if kasm_server_needed:
-                    KasmUser().post(name, uid, password)
-                return jsonify(user.read())
-            # failure returns error
-            return {'message': f'Processed {name}, either a format error or User ID {uid} is duplicate'}, 400
+            KasmUser().post(name, uid, password)
+            return jsonify(user.read())
 
 
         @token_required()
