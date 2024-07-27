@@ -1,4 +1,6 @@
-from flask import Blueprint, request, jsonify, current_app, Response, g
+import os
+import time
+from flask import Blueprint, app, request, jsonify, current_app, Response, g
 from flask_restful import Api, Resource # used for REST API building
 from datetime import datetime
 import os
@@ -22,7 +24,41 @@ class UserAPI:
             current_user = g.current_user
             ''' Return the current user as a json object '''
             return jsonify(current_user.read())
-         
+    
+    class _BULK(Resource):  # Users API operation for Create, Read, Update, Delete 
+        def post(self):
+            ''' Handle bulk user creation by sending POST requests to the single user endpoint '''
+            users = request.get_json()
+            
+            if not isinstance(users, list):
+                return {'message': 'Expected a list of user data'}, 400
+            
+            results = {'errors': []}
+            
+            with current_app.test_client() as client:
+                for user in users:
+                    # Introduce a small delay to avoid overwhelming the database
+                    time.sleep(0.1)
+                    
+                    # Simulate a POST request to the single user creation endpoint
+                    response = client.post('/api/user', json=user)
+                    
+                    if response.status_code != 200:  # Assuming success status code is 200
+                        results['errors'].append(response.get_json())
+                        continue
+                
+                    uid = user.get('uid')
+                    uo = User.query.filter_by(_uid=uid).first()
+                    # Process sections if provided
+                    if uo is not None:
+                        abbreviations = [section["abbreviation"] for section in user.get('sections', [])]
+                        if len(abbreviations) > 0:  # Check if the list is not empty
+                            so = uo.add_sections(abbreviations)
+                            if so is None:
+                                results['errors'].append({'message': f'Failed to add sections {abbreviations} to user {uid}'})
+            
+            return jsonify(results) 
+            
     class _CRUD(Resource):  # Users API operation for Create, Read, Update, Delete 
         def post(self): # Create method
             ''' Read data for json body '''
@@ -45,7 +81,7 @@ class UserAPI:
             else:
                 kasm_server_needed = bool(kasm_server_needed)
                 
-            # look for password and dob
+            # look for additional fields 
             password = body.get('password')
             dob = body.get('dob')
 
@@ -71,9 +107,9 @@ class UserAPI:
                 return {'message': f'Processed {name}, either a format error or User ID {uid} is duplicate'}, 400
             
             # success returns json of user
+
             KasmUser().post(name, uid, password)
             return jsonify(user.read())
-
 
         @token_required()
         def get(self):
@@ -95,56 +131,52 @@ class UserAPI:
             # return response, a json list of user dictionaries
             return jsonify(json_ready)
         
-        @token_required() 
-        def put(self):  # Update method
-            # retrieve the current user from the token_required authentication check  
+        @token_required()
+        def put(self):
+            ''' Retrieve the current user from the token_required authentication check '''
             current_user = g.current_user
-            
-            ''' Read data for json body '''
+            ''' Read data from the JSON body of the request '''
             body = request.get_json()
-            
-            ''' Check if user is owner or admin ''' 
-            if (current_user.role == 'Admin'):
-                ''' Find user '''
+
+            ''' Admin-specific update handling '''
+            if current_user.role == 'Admin':
+                # Admin requires a User ID to change other users' details
                 uid = body.get('uid')
-                if uid is None:  # if id is not provided
-                    return {
-                        "message": "Admin requires a User ID to change",
-                        "data": None,
-                        "error": "Bad request"
-                    }, 400
+                if uid is None:
+                    return {"message": "Admin requires a User ID to change", "data": None, "error": "Bad request"}, 400
+                # Find the user by UID
                 user = User.query.filter_by(_uid=uid).first()
                 if user is None:
                     return {'message': f'User {uid} not found'}, 404
             else:
+                # Non-admin users can only update their own details
                 user = current_user
-             
-            ''' Update any fields that have data '''
+
+            ''' Update user details if provided '''
+            # Update name if provided in the request body
             name = body.get('name')
-            if name is not None and name != '':
+            if name:
                 user.name = name
-                
-            uid = body.get('uid')
-            if uid is not None and uid != '':
-                user.uid = uid
-                
-            dob = body.get('dob')   
-            if dob is not None and dob != '':
+
+            # Update UID if provided in the request body
+            new_uid = body.get('uid')
+            # Update date of birth if provided in the request body
+            dob = body.get('dob')
+            if dob:
                 try:
                     user.dob = datetime.strptime(dob, '%Y-%m-%d').date()
-                except:
-                    return {
-                        "message": f"Date of birth format error {dob}, must be yyyy-mm-dd",
-                        "data": None,
-                        "error": "Bad request",
-                    }, 400
-                    
+                except ValueError:
+                    return {"message": f"Date of birth format error {dob}, must be yyyy-mm-dd", "data": None, "error": "Bad request"}, 400
+
+            # Update Kasm server requirement if provided in the request body
             kasm_server_needed = body.get('kasm_server_needed')
             if kasm_server_needed is not None:
                 user.kasm_server_needed = bool(kasm_server_needed)
 
-            ''' Commit changes to the database '''
-            user.update()
+            ''' Update directory if UID changes '''
+            user.update_directory(new_uid=new_uid)
+
+            ''' Return the updated user details as a JSON object '''
             return jsonify(user.read())
         
         @token_required("Admin")
@@ -184,6 +216,31 @@ class UserAPI:
             if not current_user.add_sections(sections):
                 return {'message': f'1 or more sections failed to add, current {sections} requested {current_user.read_sections()}'}, 404
             
+            return jsonify(current_user.read_sections())
+        
+        @token_required()
+        def put(self):
+            ''' Retrieve the current user from the token_required authentication check '''
+            current_user = g.current_user
+
+            ''' Read data for json body '''
+            body = request.get_json()
+
+            ''' Error checking '''
+            section_data = body.get('section')
+            if not section_data:
+                return {'message': 'Section data is required'}, 400
+            
+            if not section_data.get('abbreviation'):
+                return {'message': 'Section abbreviation is required'}, 400
+            
+            if not section_data.get('year'):
+                return {'message': 'Section year is required'}, 400
+
+            ''' Update section year '''
+            if not current_user.update_section(section_data):
+                return {'message': f'Section {section_data.get("abbreviation")} not found or update failed'}, 404
+
             return jsonify(current_user.read_sections())
         
         @token_required()
@@ -303,6 +360,7 @@ class UserAPI:
 
     # building RESTapi endpoint
     api.add_resource(_ID, '/id')
+    api.add_resource(_BULK, '/users')
     api.add_resource(_CRUD, '/user')
     api.add_resource(_Section, '/user/section') 
     api.add_resource(_Security, '/authenticate')          

@@ -3,17 +3,30 @@ from random import randrange
 from datetime import date
 import os, base64
 import json
+from flask import current_app
 
 from flask_login import UserMixin
 
 from __init__ import app, db
 from sqlalchemy.exc import IntegrityError
 from werkzeug.security import generate_password_hash, check_password_hash
+from model.stocks import StockUser
 
 
-''' Tutorial: https://www.sqlalchemy.org/library.html#tutorials, try to get into Python shell and follow along '''
+""" Helper Functions """
+
+def default_year():
+    """Returns the default year for user enrollment based on the current month."""
+    current_month = date.today().month
+    current_year = date.today().year
+    # If current month is between August (8) and December (12), the enrollment year is next year.
+    if 7 <= current_month <= 12:
+        current_year = current_year + 1
+    return current_year 
 
 """ Database Models """
+
+''' Tutorial: https://www.sqlalchemy.org/library.html#tutorials, try to get into Python shell and follow along '''
 
 class UserSection(db.Model):
     """ 
@@ -39,16 +52,7 @@ class UserSection(db.Model):
     def __init__(self, user, section):
         self.user = user
         self.section = section
-        self.set_year_based_on_enrollment()
-
-    def set_year_based_on_enrollment(self):
-        current_month = date.today().month
-        current_year = date.today().year
-        # If current month is between August (8) and December (12), the enrollment year is next year.
-        if 7 <= current_month <= 12:
-            self.year = current_year + 1
-        else:
-            self.year = current_year
+        self.year = default_year()
 
 # Define a many-to-many relationship to 'users' table
 class Section(db.Model):
@@ -142,6 +146,8 @@ class User(db.Model, UserMixin):
     # Relationship to manage the association between users and sections
     sections = db.relationship('Section', secondary=UserSection.__table__, lazy='subquery',
                                backref=db.backref('users', lazy=True))
+    stock_user = db.relationship("StockUser", backref=db.backref("users", cascade="all"), lazy=True,uselist=False)
+
 
     # Constructor of a User object, initializes the instance variables within object (self)
     def __init__(self, name, uid, password="123qwerty", kasm_server_needed=False, role="User", pfp=''):
@@ -250,15 +256,17 @@ class User(db.Model, UserMixin):
     # CRUD read converts self to dictionary
     # returns dictionary
     def read(self):
-        return {
+        data = {
             "id": self.id,
             "name": self.name,
             "uid": self.uid,
             "role": self._role,
             "pfp": self._pfp,
             "kasm_server_needed": self.kasm_server_needed,
-            "sections": [section.read() for section in self.sections] if self.sections else None
         }
+        sections = self.read_sections()
+        data.update(sections)
+        return data
         
     # CRUD update: updates user name, password, phone
     # returns self
@@ -284,7 +292,6 @@ class User(db.Model, UserMixin):
         db.session.commit()
         return None
     
-    
     def save_pfp(self, image_data, filename):
         """For saving profile picture."""
         try:
@@ -303,9 +310,6 @@ class User(db.Model, UserMixin):
         self.pfp = None
         db.session.commit()
         
-    def read_sections(self):
-        return { "sections": [section.read() for section in self.sections] if self.sections else None }
-    
     def add_section(self, section):
         # Query for the section using the provided abbreviation
         found = any(s.id == section.id for s in self.sections)
@@ -324,32 +328,131 @@ class User(db.Model, UserMixin):
         return self
     
     def add_sections(self, sections):
+        """
+        Add multiple sections to the user's profile.
+
+        :param sections: A list of section abbreviations to be added.
+        :return: The user object with the added sections, or None if any section is not found.
+        """
+        # Iterate over each section abbreviation provided
         for section in sections:
+            # Query the Section model to find the section object by its abbreviation
             section_obj = Section.query.filter_by(_abbreviation=section).first()
+            # If the section is not found, return None
             if not section_obj:
                 return None
+            # Add the found section object to the user's profile
             self.add_section(section_obj)
+        # Return the user object with the added sections
         return self
+        
+    def read_sections(self):
+        """Reads the sections associated with the user."""
+        sections = []
+        # The user_sections backref provides access to the many-to-many relationship data 
+        if self.user_sections:
+            for user_section in self.user_sections:
+                # This user_section backref "row" can be used to access section methods 
+                section_data = user_section.section.read()
+                # Extract the year from the relationship data  
+                section_data['year'] = user_section.year  
+                sections.append(section_data)
+        return {"sections": sections} 
+    
+    def update_section(self, section_data):
+        """
+        Updates the year enrolled for a given section.
+
+        :param section_data: A dictionary containing the section's abbreviation and the new year.
+        :return: A boolean indicating if the update was successful.
+        """
+        abbreviation = section_data.get("abbreviation", None)
+        year = int(section_data.get("year", default_year()))  # Convert year to integer, default to 0 if not found
+
+        # Find the user_section that matches the provided abbreviation
+        section = next(
+            (s for s in self.user_sections if s.section.abbreviation == abbreviation),
+            None
+        )
+
+        if section:
+            # Update the year for the found section
+            section.year = year
+            db.session.commit()
+            return True  # Update successful
+        else:
+            return False  # Section not found
     
     def remove_sections(self, section_abbreviations):
+        """
+        Remove sections based on provided abbreviations.
+
+        :param section_abbreviations: A list of section abbreviations to be removed.
+        :return: True if all sections are removed successfully, False otherwise.
+        """
         try:
+            # Iterate over each abbreviation in the provided list
             for abbreviation in section_abbreviations:
+                # Find the section matching the current abbreviation
                 section = next((section for section in self.sections if section.abbreviation == abbreviation), None)
                 if section:
+                    # If the section is found, remove it from the list of sections
                     self.sections.remove(section)
                 else:
+                    # If the section is not found, raise a ValueError
                     raise ValueError(f"Section with abbreviation '{abbreviation}' not found.")
             db.session.commit()
             return True
         except ValueError as e:
+            # Roll back the transaction if a ValueError is encountered
             db.session.rollback()
             print(e)  # Log the specific abbreviation error
             return False
         except Exception as e:
+            # Roll back the transaction if any other exception is encountered
             db.session.rollback()
-            print(f"Unexpected error removing sections: {e}")
+            print(f"Unexpected error removing sections: {e}") # Log the unexpected error
             return False
-    """Database Creation and Testing """
+        
+    def update_directory(self, new_uid=None):
+        """
+        Update the user's directory based on the new UID provided.
+
+        :param new_uid: Optional new UID to update the user's directory.
+        :return: The updated user object.
+        """
+        # Store the old UID for later comparison
+        old_uid = self._uid
+        # Update the UID if a new one is provided
+        if new_uid:
+            self._uid = new_uid
+
+        # Commit the UID change to the database
+        db.session.commit()
+
+        # If the UID has changed, update the directory name
+        if old_uid != self._uid:
+            old_path = os.path.join(current_app.config['UPLOAD_FOLDER'], old_uid)
+            new_path = os.path.join(current_app.config['UPLOAD_FOLDER'], self._uid)
+            if os.path.exists(old_path):
+                os.rename(old_path, new_path)
+        # Return the updated user object
+        return self
+
+    def add_stockuser(self, uid):
+        user = User.query.filter_by(_uid=uid).first()
+        if user:
+            found = user.stock_user is not None
+            if not found:
+                stock_user = StockUser(uid=user.uid, stockmoney=100000, accountdate=date.today())
+                db.session.add(stock_user)
+                db.session.commit()
+                return True
+            else:
+                print(f"StockUser for user {uid} already exists.")
+                return False
+    
+"""Database Creation and Testing """
 
 # Builds working data set for testing
 def initUsers():
