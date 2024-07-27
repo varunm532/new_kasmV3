@@ -2,17 +2,14 @@ from flask import Blueprint, request, jsonify, current_app, Response, g
 from flask_restful import Api, Resource # used for REST API building
 from datetime import datetime
 import os
-from dotenv import load_dotenv
 import requests
 import jwt
 from api.jwt_authorize import token_required
 from model.user import User
-from model.kasm import CreateUser
+from model.kasm import KasmUser
 
 user_api = Blueprint('user_api', __name__,
                    url_prefix='/api')
-
-load_dotenv()
 
 # API docs https://flask-restful.readthedocs.io/en/latest/api.html
 api = Api(user_api)
@@ -47,7 +44,6 @@ class UserAPI:
                 kasm_server_needed = False
             else:
                 kasm_server_needed = bool(kasm_server_needed)
-                CreateUser().post(name, uid, password)
                 
             # look for password and dob
             password = body.get('password')
@@ -74,9 +70,13 @@ class UserAPI:
             user = uo.create()
             # success returns json of user
             if user:
+                #assume that user was successfully created, then check for kasm needed
+                if kasm_server_needed:
+                    KasmUser().post(name, uid, password)
                 return jsonify(user.read())
             # failure returns error
             return {'message': f'Processed {name}, either a format error or User ID {uid} is duplicate'}, 400
+
 
         @token_required()
         def get(self):

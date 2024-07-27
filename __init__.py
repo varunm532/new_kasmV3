@@ -5,10 +5,14 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 import os
 from sqlalchemy import create_engine
+from dotenv import load_dotenv
+
 
 
 # Setup of key Flask object (app)
 app = Flask(__name__)
+
+load_dotenv()
 
 # Initialize Flask-Login object
 login_manager = LoginManager()
