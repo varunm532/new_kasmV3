@@ -6,7 +6,7 @@ from api.jwt_authorize import token_required
 from model.user import User
 
 
-class CreateUser(Resource):
+class KasmUser(Resource):
     def post(self, name, uid, password):
         # Checking if system has the required environment variables
         if not os.getenv('KASM_API_KEY_SECRET') or not os.getenv('KASM_API_KEY'):
