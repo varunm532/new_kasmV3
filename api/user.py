@@ -67,7 +67,7 @@ class UserAPI:
             ''' Avoid garbage in, error checking '''
             # validate name
             name = body.get('name')
-            passwor = body.get('password')
+            password = body.get('password')
             if name is None or len(name) < 2:
                 return {'message': f'Name is missing, or is less than 2 characters'}, 400
             # validate uid
@@ -107,8 +107,8 @@ class UserAPI:
                 return {'message': f'Processed {name}, either a format error or User ID {uid} is duplicate'}, 400
             
             # success returns json of user
-
-            KasmUser().post(name, uid, password)
+            if kasm_server_needed:
+                KasmUser().post(name, uid, password)
             return jsonify(user.read())
 
         @token_required()
