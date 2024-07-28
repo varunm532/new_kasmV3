@@ -1,24 +1,23 @@
-from flask_restful import Resource # used for REST API building
-import os
-from dotenv import load_dotenv
 import requests
-from api.jwt_authorize import token_required
-from model.user import User
-
+from flask_restful import Resource # used for REST API building
+from __init__ import app
 
 class KasmUser(Resource):
     def post(self, name, uid, password):
         # Checking if system has the required environment variables
-        if not os.getenv('KASM_API_KEY_SECRET') or not os.getenv('KASM_API_KEY'):
+        KASM_SERVER = app.config['KASM_SERVER'] 
+        KASM_API_KEY = app.config['KASM_API_KEY'] 
+        KASM_API_KEY_SECRET = app.config['KASM_API_KEY_SECRET'] 
+        if not KASM_SERVER or not KASM_API_KEY or not KASM_API_KEY_SECRET:
             #gracefully prevent kasm.py from continueing if the environment variables are not set
-            return {'message': 'KASM_API_KEY_SECRET or KASM_API_KEY not set'}, 400
+            return {'message': '1 or more KASM keys are required to create a user'}, 400
         else:
             #checking if credentials are valid
             try:
-                url = os.getenv('KASM_SERVER') + "/api/public/get_users"
+                url = KASM_SERVER + "/api/public/validate_credentials" 
                 data={
-                    "api_key": os.getenv('KASM_API_KEY'),
-                    "api_key_secret": os.getenv('KASM_API_KEY_SECRET')
+                    "api_key": KASM_API_KEY,
+                    "api_key_secret": KASM_API_KEY_SECRET 
                 }
                 response = requests.post(url, json=data)
                 if response.status_code == 401:
@@ -45,10 +44,10 @@ class KasmUser(Resource):
             if password is None:
                 return {'message': f'Password is missing'}, 400
 
-            kasm_url = os.getenv('KASM_SERVER') + "/api/public/create_user"
+            kasm_url = KASM_SERVER + "/api/public/create_user"
             kasm_data = {
-                "api_key": os.getenv('KASM_API_KEY'),
-                "api_key_secret": os.getenv('KASM_API_KEY_SECRET'),
+                "api_key": KASM_API_KEY,
+                "api_key_secret": KASM_API_KEY_SECRET,
                 "target_user": {
                     "username" : uid,
                     "first_name" : first_name,

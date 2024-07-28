@@ -1,11 +1,8 @@
-import os
-import time
+import jwt
 from flask import Blueprint, app, request, jsonify, current_app, Response, g
 from flask_restful import Api, Resource # used for REST API building
 from datetime import datetime
-import os
-import requests
-import jwt
+from __init__ import app
 from api.jwt_authorize import token_required
 from model.user import User
 from model.kasm import KasmUser
@@ -37,8 +34,8 @@ class UserAPI:
             
             with current_app.test_client() as client:
                 for user in users:
-                    # Introduce a small delay to avoid overwhelming the database
-                    time.sleep(0.1)
+                    # Set a default password as we don't have it for bulk creation
+                    user["password"] = app.config['DEFAULT_PASSWORD']
                     
                     # Simulate a POST request to the single user creation endpoint
                     response = client.post('/api/user', json=user)
@@ -67,7 +64,7 @@ class UserAPI:
             ''' Avoid garbage in, error checking '''
             # validate name
             name = body.get('name')
-            passwor = body.get('password')
+            password = body.get('password')
             if name is None or len(name) < 2:
                 return {'message': f'Name is missing, or is less than 2 characters'}, 400
             # validate uid

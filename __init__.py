@@ -20,21 +20,24 @@ cors = CORS(app, supports_credentials=True, origins=['http://localhost:4100', 'h
 # load all secrets from .env file
 load_dotenv() 
 
-# Secret keys for session handling and CSRF protection
-SECRET_KEY = os.environ.get('SECRET_KEY') or 'SECRET_KEY'
+# System Defaults
+DEFAULT_PASSWORD = os.environ.get('DEFAULT_PASSWORD') or 'password'
+app.config['DEFAULT_PASSWORD'] = DEFAULT_PASSWORD
+
+# Browser settings
+SECRET_KEY = os.environ.get('SECRET_KEY') or 'SECRET_KEY' # secret key for session management
 SESSION_COOKIE_NAME = os.environ.get('SESSION_COOKIE_NAME') or 'sess_python_flask'
 JWT_TOKEN_NAME = os.environ.get('JWT_TOKEN_NAME') or 'jwt_python_flask'
 app.config['SECRET_KEY'] = SECRET_KEY
 app.config['SESSION_COOKIE_NAME'] = SESSION_COOKIE_NAME 
 app.config['JWT_TOKEN_NAME'] = JWT_TOKEN_NAME 
 
-# Database references
-dbName = 'portfolio_2025'
-is_production = os.getenv('FLASK_ENV') == 'production'
-if is_production:
+# Database settings 
+dbName = 'user_management_db'
+DB_USERNAME = os.environ.get('DB_USERNAME') or None
+DB_PASSWORD = os.environ.get('DB_PASSWORD') or None
+if DB_USERNAME and DB_PASSWORD:
     # Production - Use MySQL
-    DB_USERNAME = 'kasm_admin'
-    DB_PASSWORD = 'pZTXfhhcvuqkF2vEy27x'
     DB_HOST = 'kasm-student-db-instance.ctenoof0kzic.us-east-2.rds.amazonaws.com'
     DB_PORT = '3306'
     DB_NAME = dbName 
@@ -51,8 +54,13 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
-# Images storage settings and location
+# Image upload settings 
 app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # maximum size of uploaded content
 app.config['UPLOAD_EXTENSIONS'] = ['.jpg', '.png', '.gif']  # supported file types
 app.config['UPLOAD_FOLDER'] = os.path.join(app.instance_path, 'uploads')
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
+# KASM settings
+app.config['KASM_SERVER'] = os.environ.get('KASM_SERVER') or 'https://kasm.nighthawkcodingsociety.com'
+app.config['KASM_API_KEY'] = os.environ.get('KASM_API_KEY') or None
+app.config['KASM_API_KEY_SECRET'] = os.environ.get('KASM_API_KEY_SECRET') or None

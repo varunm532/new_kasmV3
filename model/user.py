@@ -150,7 +150,7 @@ class User(db.Model, UserMixin):
 
 
     # Constructor of a User object, initializes the instance variables within object (self)
-    def __init__(self, name, uid, password="123qwerty", kasm_server_needed=False, role="User", pfp=''):
+    def __init__(self, name, uid, password=app.config["DEFAULT_PASSWORD"], kasm_server_needed=False, role="User", pfp=''):
         self._name = name
         self._uid = uid
         self.set_password(password)
