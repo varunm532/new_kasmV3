@@ -439,18 +439,22 @@ class User(db.Model, UserMixin):
         # Return the updated user object
         return self
 
-    def add_stockuser(self, uid):
-        user = User.query.filter_by(_uid=uid).first()
-        if user:
-            found = user.stock_user is not None
-            if not found:
-                stock_user = StockUser(uid=user.uid, stockmoney=100000, accountdate=date.today())
-                db.session.add(stock_user)
-                db.session.commit()
-                return True
-            else:
-                print(f"StockUser for user {uid} already exists.")
-                return False
+    def add_stockuser(self):
+        """
+        Add 1-to-1 stock user to the user's record. 
+        """
+        if not self.stock_user:
+            self.stock_user = StockUser(uid=self._uid, stockmoney=100000)
+            db.session.commit()
+        return self 
+            
+    def read_stockuser(self):
+        """
+        Read the stock user daata associated with the user.
+        """
+        if self.stock_user:
+            return self.stock_user.read()
+        return None
     
 """Database Creation and Testing """
 

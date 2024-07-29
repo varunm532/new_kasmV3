@@ -138,7 +138,7 @@ class StockUser(db.Model):
     # 
     # users = db.relationship("User", backref=db.backref("stockuser", single_parent=True), lazy=True)
 
-    def __init__(self, uid, stockmoney, accountdate):
+    def __init__(self, uid, stockmoney):
         self._uid = uid
         self._stockmoney = stockmoney
         self._accountdate = date.today()

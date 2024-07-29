@@ -3,6 +3,7 @@ from flask import Blueprint, request, jsonify, current_app, Response, g
 from flask_restful import Api, Resource # used for REST API building
 from datetime import datetime
 import requests
+from api.jwt_authorize import token_required
 from model.user import User
 from model.stocks import StockUser,StockTransaction,TableStock, UserTransactionStock
 
@@ -53,6 +54,23 @@ class StockAPI:
                     print("this is data" + str(data))
             return data         
     class _initilize_user(Resource):
+        @token_required()
+        def get(self):
+            """Reads the stockuser table for logggend in user"""
+            current_user = g.current_user
+            stock_user = current_user.read_stockuser()
+            if stock_user:
+                return jsonify(stock_user)
+            else:
+                return {'message': f'No stock account for {current_user.name} found'}, 404
+        
+        @token_required()
+        def put(self):
+            """Creates a new stockuser account for logged in user"""
+            current_user = g.current_user
+            current_user.add_stockuser()
+            return jsonify(current_user.read_stockuser()) 
+        
         def post(self):
             body = request.get_json()
             uid = body.get('uid')
@@ -126,7 +144,7 @@ class StockAPI:
             
 
     
-    api.add_resource(_initilize_user, '/initilize')
+    api.add_resource(_initilize_user, '/initialize')
     api.add_resource(_tranaction_buy, '/buy')
     api.add_resource(_transaction_sell, '/sell')
     api.add_resource(_Account_expirary, '/expire')
