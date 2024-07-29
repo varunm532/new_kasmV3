@@ -104,8 +104,8 @@ class UserAPI:
                 return {'message': f'Processed {name}, either a format error or User ID {uid} is duplicate'}, 400
             
             # success returns json of user
-
-            KasmUser().post(name, uid, password)
+            if kasm_server_needed:
+                KasmUser().post(name, uid, password)
             return jsonify(user.read())
 
         @token_required()
