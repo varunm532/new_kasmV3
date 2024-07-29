@@ -142,42 +142,42 @@ class UserAPI:
 
             ''' Admin-specific update handling '''
             if current_user.role == 'Admin':
-                # Admin requires a User ID to change other users' details
                 uid = body.get('uid')
-                if uid is None:
-                    return {"message": "Admin requires a User ID to change", "data": None, "error": "Bad request"}, 400
-                # Find the user by UID
-                user = User.query.filter_by(_uid=uid).first()
-                if user is None:
-                    return {'message': f'User {uid} not found'}, 404
+                if uid is None or uid == current_user.uid:
+                    # Admin is updating themself
+                    user = current_user 
+                else:
+                    # Admin is updating another user
+                    user = User.query.filter_by(_uid=uid).first()
+                    if user is None:
+                        return {'message': f'User {uid} not found'}, 404
             else:
-                # Non-admin users can only update their own details
+                # Non-admin can only update themselves
                 user = current_user
 
-            ''' Update user details if provided '''
+            # Update UID if provided, this will not work for Admins as implemented 
+            uid = body.get('uid') 
+            if uid is not None and uid != user.uid:
+                user.update_uid(new_uid=uid)
+                
+            # Update password if provided 
+            password = body.get('password')
+            if password:
+                user.set_password(password)
+
             # Update name if provided in the request body
             name = body.get('name')
             if name:
                 user.name = name
-
-            # Update UID if provided in the request body
-            new_uid = body.get('uid')
-            # Update date of birth if provided in the request body
-            dob = body.get('dob')
-            if dob:
-                try:
-                    user.dob = datetime.strptime(dob, '%Y-%m-%d').date()
-                except ValueError:
-                    return {"message": f"Date of birth format error {dob}, must be yyyy-mm-dd", "data": None, "error": "Bad request"}, 400
-
+                
             # Update Kasm server requirement if provided in the request body
             kasm_server_needed = body.get('kasm_server_needed')
             if kasm_server_needed is not None:
                 user.kasm_server_needed = bool(kasm_server_needed)
 
-            ''' Update directory if UID changes '''
-            user.update_directory(new_uid=new_uid)
-
+            # Save changes to the database
+            user.save()
+            
             ''' Return the updated user details as a JSON object '''
             return jsonify(user.read())
         

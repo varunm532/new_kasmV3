@@ -291,7 +291,12 @@ class User(db.Model, UserMixin):
         db.session.delete(self)
         db.session.commit()
         return None
-    
+   
+    def save(self):
+        """Save user to database."""
+        db.session.commit()
+        return
+     
     def save_pfp(self, image_data, filename):
         """For saving profile picture."""
         try:
@@ -414,7 +419,7 @@ class User(db.Model, UserMixin):
             print(f"Unexpected error removing sections: {e}") # Log the unexpected error
             return False
         
-    def update_directory(self, new_uid=None):
+    def update_uid(self, new_uid=None):
         """
         Update the user's directory based on the new UID provided.
 
@@ -424,11 +429,10 @@ class User(db.Model, UserMixin):
         # Store the old UID for later comparison
         old_uid = self._uid
         # Update the UID if a new one is provided
-        if new_uid:
+        if new_uid and new_uid != self._uid:
             self._uid = new_uid
-
-        # Commit the UID change to the database
-        db.session.commit()
+            # Commit the UID change to the database
+            db.session.commit()
 
         # If the UID has changed, update the directory name
         if old_uid != self._uid:
