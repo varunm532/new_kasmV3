@@ -45,14 +45,19 @@ class UserAPI:
                         continue
                 
                     uid = user.get('uid')
-                    uo = User.query.filter_by(_uid=uid).first()
+                    user_obj = User.query.filter_by(_uid=uid).first()
                     # Process sections if provided
-                    if uo is not None:
+                    if user_obj is not None:
                         abbreviations = [section["abbreviation"] for section in user.get('sections', [])]
                         if len(abbreviations) > 0:  # Check if the list is not empty
-                            so = uo.add_sections(abbreviations)
-                            if so is None:
+                            section_obj = user_obj.add_sections(abbreviations)
+                            if section_obj:
+                                # update the year of the added sections
+                                for section in user.get('sections'):
+                                    user_obj.update_section(section)
+                            else:
                                 results['errors'].append({'message': f'Failed to add sections {abbreviations} to user {uid}'})
+                                
             
             return jsonify(results) 
             
