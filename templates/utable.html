@@ -42,8 +42,9 @@
                     <button class="btn btn-primary edit-btn" data-id="{{ user.id }}">Edit</button>
                     {% if current_user.role == 'Admin' %}
                     <button class="btn btn-danger delete-btn" data-id="{{ user.id }}">Delete</button>
+                    <button class="btn btn-warning reset-password-btn" data-id="{{ user.id }}">Reset Password</button>
                     {% endif %}
-                </td>
+                </td>                
             </tr>
             {% endif %}
             {% endfor %}
@@ -117,9 +118,12 @@
 
 {% block background %}
 <script>
+    
     document.addEventListener('DOMContentLoaded', function() {
         const editButtons = document.querySelectorAll('.edit-btn');
         const deleteButtons = document.querySelectorAll('.delete-btn');
+        const resetPasswordButtons = document.querySelectorAll('.reset-password-btn');
+
 
         editButtons.forEach(button => {
             button.addEventListener('click', async function() {
@@ -199,6 +203,35 @@
             document.querySelector(`button[data-id="${userId}"]`).closest('tr').remove();
             $('#deleteModal').modal('hide');
         });
+
+        resetPasswordButtons.forEach(button => {
+        button.addEventListener('click', async function() {
+            const userId = this.getAttribute('data-id');
+            const confirmReset = confirm('Are you sure you want to reset the password for this user?');
+
+            if (confirmReset) {
+                try {
+                    const response = await fetch(`/users/reset_password/${userId}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                      //      'Authorization': 'Bearer ' + ''
+                        }
+                    });
+
+                    if (response.ok) {
+                        alert('Password reset successfully.');
+                    } else {
+                        const result = await response.json();
+                        alert('Failed to reset password: ' + result.error);
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('An error occurred while resetting the password.');
+                }
+            }
+        });
+    });
     });
 </script>
 {% endblock %}

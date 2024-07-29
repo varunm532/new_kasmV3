@@ -5,6 +5,8 @@ from flask_login import current_user, login_user, logout_user
 from flask.cli import AppGroup
 from flask_login import current_user, login_required
 from flask import current_app
+from werkzeug.security import generate_password_hash
+
 
 # import "objects" from "this" project
 from __init__ import app, db, login_manager  # Key Flask objects 
@@ -105,6 +107,7 @@ def edit_user(user_id):
     })
 
 
+
 @app.route('/users/delete/<int:user_id>', methods=['DELETE'])
 @login_required
 def delete_user(user_id):
@@ -115,7 +118,22 @@ def delete_user(user_id):
         return jsonify({'message': 'User deleted successfully'}), 200
     return jsonify({'error': 'User not found'}), 404
 
+@app.route('/users/reset_password/<int:user_id>', methods=['POST'])
+@login_required
+def reset_password(user_id):
+    if current_user.role != 'Admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
 
+    # Set the new password
+    new_password = '123Qwerty!'
+    user._password = generate_password_hash(new_password)
+    db.session.commit()
+
+    return jsonify({'message': 'Password reset successfully'}), 200
 # Create an AppGroup for custom commands
 custom_cli = AppGroup('custom', help='Custom commands')
 
