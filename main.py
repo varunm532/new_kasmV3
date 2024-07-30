@@ -83,20 +83,16 @@ def utable():
     users = User.query.all()
     return render_template("utable.html", user_data=users)
 
+@app.route('/users/table2')
+@login_required
+def u2table():
+    users = User.query.all()
+    return render_template("u2table.html", user_data=users)
+
 # Helper function to extract uploads for a user (ie PFP image)
 @app.route('/uploads/<path:filename>')
 def uploaded_file(filename):
     return send_from_directory(current_app.config['UPLOAD_FOLDER'], filename)
-
-@app.route('/users/edit/<int:user_id>', methods=['POST'])
-@login_required
-def edit_user(user_id):
-    user = User.query.get(user_id)
-    if not user:
-        return jsonify({'error': 'User not found'}), 404
-    data = request.get_json()
-    uo = user.update(kasm_server_needed=data.get('kasmServerNeeded')) 
-    return jsonify(uo.read())
  
 @app.route('/users/delete/<int:user_id>', methods=['DELETE'])
 @login_required
@@ -118,8 +114,9 @@ def reset_password(user_id):
         return jsonify({'error': 'User not found'}), 404
 
     # Set the new password
-    uo = user.update(password=app.config['DEFAULT_PASSWORD'])
-    return jsonify(uo.read())
+    if user.update(password=app.config['DEFAULT_PASSWORD']):
+        return jsonify({'message': 'Password reset successfully'}), 200
+    return jsonify({'error': 'Password reset failed'}), 500
 
 # Create an AppGroup for custom commands
 custom_cli = AppGroup('custom', help='Custom commands')
