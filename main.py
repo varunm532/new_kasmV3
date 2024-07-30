@@ -94,27 +94,16 @@ def edit_user(user_id):
     user = User.query.get(user_id)
     if not user:
         return jsonify({'error': 'User not found'}), 404
-
     data = request.get_json()
-    user.kasm_server_needed = data.get('kasmServerNeeded', user.kasm_server_needed)
-    user.status = data.get('status', user.status)
-
-    db.session.commit()
-
-    return jsonify({
-        'kasmServerNeeded': user.kasm_server_needed,
-        'status': user.status,
-    })
-
-
-
+    uo = user.update(kasm_server_needed=data.get('kasmServerNeeded')) 
+    return jsonify(uo.read())
+ 
 @app.route('/users/delete/<int:user_id>', methods=['DELETE'])
 @login_required
 def delete_user(user_id):
     user = User.query.get(user_id)
     if user:
-        db.session.delete(user)
-        db.session.commit()
+        user.delete()
         return jsonify({'message': 'User deleted successfully'}), 200
     return jsonify({'error': 'User not found'}), 404
 
