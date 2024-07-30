@@ -5,7 +5,7 @@ from datetime import datetime
 from __init__ import app
 from api.jwt_authorize import token_required
 from model.user import User
-from model.kasm import KasmUser
+from model.kasm import KasmCreateUser
 
 user_api = Blueprint('user_api', __name__,
                    url_prefix='/api')
@@ -110,7 +110,7 @@ class UserAPI:
             
             # success returns json of user
             if kasm_server_needed:
-                KasmUser().post(name, uid, password)
+                KasmCreateUser().post(name, uid, password)
             return jsonify(user.read())
 
         @token_required()

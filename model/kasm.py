@@ -2,7 +2,7 @@ import requests
 from flask_restful import Resource # used for REST API building
 from __init__ import app
 
-class KasmUser(Resource):
+class KasmCreateUser(Resource):
     def post(self, name, uid, password):
         # Checking if system has the required environment variables
         KASM_SERVER = app.config['KASM_SERVER'] 
