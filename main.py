@@ -129,10 +129,8 @@ def reset_password(user_id):
         return jsonify({'error': 'User not found'}), 404
 
     # Set the new password
-    new_password = app.config['DEFAULT_PASSWORD']
-    user.set_password(new_password)
-    db.session.commit
-    return jsonify({'message': f'{user.name} password reset successfullyi to {new_password}'}), 200
+    uo = user.update(password=app.config['DEFAULT_PASSWORD'])
+    return jsonify(uo.read())
 
 # Create an AppGroup for custom commands
 custom_cli = AppGroup('custom', help='Custom commands')
