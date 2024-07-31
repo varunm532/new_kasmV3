@@ -1,16 +1,14 @@
 """ database dependencies to support sqliteDB examples """
-from random import randrange
-from datetime import date
-import os, base64
-import json
 from flask import current_app
-
 from flask_login import UserMixin
-
+import os
+import json
+from datetime import date
 from __init__ import app, db
+from model.github import GitHubUser
+from model.stocks import StockUser
 from sqlalchemy.exc import IntegrityError
 from werkzeug.security import generate_password_hash, check_password_hash
-from model.stocks import StockUser
 
 
 """ Helper Functions """
@@ -138,6 +136,7 @@ class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     _name = db.Column(db.String(255), unique=False, nullable=False)
     _uid = db.Column(db.String(255), unique=True, nullable=False)
+    _email = db.Column(db.String(255), unique=False, nullable=False)
     _password = db.Column(db.String(255), unique=False, nullable=False)
     _role = db.Column(db.String(20), default="User", nullable=False)
     _pfp = db.Column(db.String(255), unique=False, nullable=True)
@@ -153,12 +152,13 @@ class User(db.Model, UserMixin):
     def __init__(self, name, uid, password=app.config["DEFAULT_PASSWORD"], kasm_server_needed=False, role="User", pfp=''):
         self._name = name
         self._uid = uid
+        self.set_email()
         self.set_password(password)
         self.kasm_server_needed = kasm_server_needed
         self._role = role
         self._pfp = pfp
 
-    # UserMixin/Flask-Login require a get_id method to return the id as a string
+    # UserMixin/Flask-Login requires a get_id method to return the id as a string
     def get_id(self):
         return str(self.id)
 
@@ -176,6 +176,11 @@ class User(db.Model, UserMixin):
     @property
     def is_anonymous(self):
         return False
+    
+    # validate uid is a unique GitHub username
+    @property
+    def email(self):
+        return self._email
 
     # a name getter method, extracts name from object
     @property
@@ -205,6 +210,15 @@ class User(db.Model, UserMixin):
     def password(self):
         return self._password[0:10] + "..."  # because of security only show 1st characters
 
+    def set_email(self):
+        github_user = GitHubUser()
+        user_data, status_code = github_user.get(self._uid)
+        
+        if status_code == 200:
+            self._email = user_data.get('email', "?")
+        else:
+            self._email = "?"
+            
     # update password, this is conventional setter
     def set_password(self, password):
         """Create a hashed password."""
@@ -258,8 +272,9 @@ class User(db.Model, UserMixin):
     def read(self):
         data = {
             "id": self.id,
-            "name": self.name,
             "uid": self.uid,
+            "name": self.name,
+            "email": self.email,
             "role": self._role,
             "pfp": self._pfp,
             "kasm_server_needed": self.kasm_server_needed,

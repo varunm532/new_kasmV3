@@ -60,6 +60,10 @@ app.config['UPLOAD_EXTENSIONS'] = ['.jpg', '.png', '.gif']  # supported file typ
 app.config['UPLOAD_FOLDER'] = os.path.join(app.instance_path, 'uploads')
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
+# GITHUB settings
+app.config['GITHUB_API_URL'] = 'https://api.github.com'
+app.config['GITHUB_TOKEN'] = os.environ.get('GITHUB_TOKEN') or None
+
 # KASM settings
 app.config['KASM_SERVER'] = os.environ.get('KASM_SERVER') or 'https://kasm.nighthawkcodingsociety.com'
 app.config['KASM_API_KEY'] = os.environ.get('KASM_API_KEY') or None

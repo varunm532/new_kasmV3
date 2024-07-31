@@ -5,6 +5,7 @@ from datetime import datetime
 from __init__ import app
 from api.jwt_authorize import token_required
 from model.user import User
+from model.github import GitHubUser
 from model.kasm import KasmUser
 
 user_api = Blueprint('user_api', __name__,
@@ -72,10 +73,17 @@ class UserAPI:
             password = body.get('password')
             if name is None or len(name) < 2:
                 return {'message': f'Name is missing, or is less than 2 characters'}, 400
+            
             # validate uid
             uid = body.get('uid')
             if uid is None or len(uid) < 2:
                 return {'message': f'User ID is missing, or is less than 2 characters'}, 400
+            
+            """
+            if GitHubUser().get(uid) is None:
+                return {'message': f'User ID {uid} not a valid GitHub ID'}, 404
+            """
+            
             # look for kasm_server_needed
             kasm_server_needed = body.get('kasm_server_needed')
             if kasm_server_needed is None:
