@@ -14,6 +14,7 @@ from __init__ import app, db, login_manager  # Key Flask objects
 from api.user import user_api 
 from api.section import section_api
 from api.pfp import pfp_api
+from api.githubapi import github_api
 from api.stock import stock_api
 # database Initialization functions
 from model.user import User, initUsers
@@ -24,6 +25,7 @@ app.register_blueprint(user_api)
 app.register_blueprint(section_api)
 app.register_blueprint(pfp_api) 
 app.register_blueprint(stock_api)
+app.register_blueprint(github_api)
 
 # Tell Flask-Login the view function name of your login route
 login_manager.login_view = "login"
