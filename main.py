@@ -83,38 +83,23 @@ def utable():
     users = User.query.all()
     return render_template("utable.html", user_data=users)
 
+@app.route('/users/table2')
+@login_required
+def u2table():
+    users = User.query.all()
+    return render_template("u2table.html", user_data=users)
+
 # Helper function to extract uploads for a user (ie PFP image)
 @app.route('/uploads/<path:filename>')
 def uploaded_file(filename):
     return send_from_directory(current_app.config['UPLOAD_FOLDER'], filename)
-
-@app.route('/users/edit/<int:user_id>', methods=['POST'])
-@login_required
-def edit_user(user_id):
-    user = User.query.get(user_id)
-    if not user:
-        return jsonify({'error': 'User not found'}), 404
-
-    data = request.get_json()
-    user.kasm_server_needed = data.get('kasmServerNeeded', user.kasm_server_needed)
-    user.status = data.get('status', user.status)
-
-    db.session.commit()
-
-    return jsonify({
-        'kasmServerNeeded': user.kasm_server_needed,
-        'status': user.status,
-    })
-
-
-
+ 
 @app.route('/users/delete/<int:user_id>', methods=['DELETE'])
 @login_required
 def delete_user(user_id):
     user = User.query.get(user_id)
     if user:
-        db.session.delete(user)
-        db.session.commit()
+        user.delete()
         return jsonify({'message': 'User deleted successfully'}), 200
     return jsonify({'error': 'User not found'}), 404
 
@@ -129,10 +114,9 @@ def reset_password(user_id):
         return jsonify({'error': 'User not found'}), 404
 
     # Set the new password
-    new_password = app.config['DEFAULT_PASSWORD']
-    user.set_password(new_password)
-    db.session.commit
-    return jsonify({'message': f'{user.name} password reset successfullyi to {new_password}'}), 200
+    if user.update(password=app.config['DEFAULT_PASSWORD']):
+        return jsonify({'message': 'Password reset successfully'}), 200
+    return jsonify({'error': 'Password reset failed'}), 500
 
 # Create an AppGroup for custom commands
 custom_cli = AppGroup('custom', help='Custom commands')
