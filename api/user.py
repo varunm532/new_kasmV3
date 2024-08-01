@@ -79,46 +79,18 @@ class UserAPI:
             if uid is None or len(uid) < 2:
                 return {'message': f'User ID is missing, or is less than 2 characters'}, 400
             
-            """
-            if GitHubUser().get(uid) is None:
-                return {'message': f'User ID {uid} not a valid GitHub ID'}, 404
-            """
+            github_data, status = GitHubUser().get(uid)
+            if status != 200:
+                return {'message': f'User ID {uid} not a valid GitHub account' }, 404
             
-            # look for kasm_server_needed
-            kasm_server_needed = body.get('kasm_server_needed')
-            if kasm_server_needed is None:
-                kasm_server_needed = False
-            else:
-                kasm_server_needed = bool(kasm_server_needed)
-                
-            # look for additional fields 
-            password = body.get('password')
-            dob = body.get('dob')
-
-            ''' #1: Key code block, setup USER OBJECT '''
-            uo = User(name=name, 
-                      uid=uid,
-                      kasm_server_needed=kasm_server_needed)
+            ''' #1: Setup minimal USER OBJECT '''
+            user_obj = User(name=name, uid=uid)
             
-            ''' Additional garbage error checking '''
-            # set password if provided
-            if password is not None:
-                uo.set_password(password)
-            # convert to date type
-            if dob is not None:
-                try:
-                    uo.dob = datetime.strptime(dob, '%Y-%m-%d').date()
-                except:
-                    return {'message': f'Date of birth format error {dob}, must be mm-dd-yyyy'}, 400
-            
-            ''' #2: Key Code block to add user to database '''
-            user = uo.create()
+            ''' #2: Add user to database '''
+            user = user_obj.create(body)
             if not user: # failure returns error message
                 return {'message': f'Processed {name}, either a format error or User ID {uid} is duplicate'}, 400
             
-            # success returns json of user
-            if kasm_server_needed:
-                KasmUser().post(name, uid, password)
             return jsonify(user.read())
 
         @token_required()
@@ -162,29 +134,8 @@ class UserAPI:
             else:
                 # Non-admin can only update themselves
                 user = current_user
-
-            # Update UID if provided, this will not work for Admins as implemented 
-            uid = body.get('uid') 
-            if uid is not None and uid != user.uid:
-                user.update_uid(new_uid=uid)
                 
-            # Update password if provided 
-            password = body.get('password')
-            if password:
-                user.set_password(password)
-
-            # Update name if provided in the request body
-            name = body.get('name')
-            if name:
-                user.name = name
-                
-            # Update Kasm server requirement if provided in the request body
-            kasm_server_needed = body.get('kasm_server_needed')
-            if kasm_server_needed is not None:
-                user.kasm_server_needed = bool(kasm_server_needed)
-
-            # Save changes to the database
-            user.save()
+            user.update(body)
             
             ''' Return the updated user details as a JSON object '''
             return jsonify(user.read())

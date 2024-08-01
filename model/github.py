@@ -4,7 +4,7 @@ from __init__ import app
 
 class GitHubUser(Resource):
     def get(self, uid):
-        url = app.config['GITHUB_API_URL'] + f'/user/{uid}'
+        url = app.config['GITHUB_API_URL'] + f'/users/{uid}'
         token = app.config['GITHUB_TOKEN']
         if not token:
             return {'message': 'GITHUB_TOKEN not set'}, 400

@@ -114,7 +114,7 @@ def reset_password(user_id):
         return jsonify({'error': 'User not found'}), 404
 
     # Set the new password
-    if user.update(password=app.config['DEFAULT_PASSWORD']):
+    if user.update({"password": app.config['DEFAULT_PASSWORD']}):
         return jsonify({'message': 'Password reset successfully'}), 200
     return jsonify({'error': 'Password reset failed'}), 500
 
