@@ -316,7 +316,7 @@ class User(db.Model, UserMixin):
         if pfp is not None: 
             self.pfp = pfp
         if kasm_server_needed is not None:
-            kasm_server_needed = bool(kasm_server_needed)
+            self.kasm_server_needed = bool(kasm_server_needed)
 
         # Check this on each update 
         self.set_email()
