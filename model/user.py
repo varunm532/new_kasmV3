@@ -353,7 +353,7 @@ class User(db.Model, UserMixin):
             file_path = os.path.join(user_dir, filename)
             with open(file_path, 'wb') as img_file:
                 img_file.write(image_data)
-            self.update(pfp=filename)
+            self.update({"pfp": filename})
         except Exception as e:
             raise e
         

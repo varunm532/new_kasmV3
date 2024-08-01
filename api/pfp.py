@@ -123,7 +123,7 @@ class _PFP(Resource):
         # Update the user's profile picture to the uploaded file
         try:
             # write the filename reference to the database
-            current_user.update(pfp=filename)
+            current_user.update({"pfp": filename})
             return {'message': 'Profile picture updated successfully'}, 200
         except Exception as e:
             return {'message': f'A database error occurred while assigning profile picture: {str(e)}'}, 500
