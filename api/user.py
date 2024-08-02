@@ -78,8 +78,9 @@ class UserAPI:
             uid = body.get('uid')
             if uid is None or len(uid) < 2:
                 return {'message': f'User ID is missing, or is less than 2 characters'}, 400
-            
-            github_data, status = GitHubUser().get(uid)
+          
+            # Accounts are desired to be GitHub accounts, create must be validated 
+            _, status = GitHubUser().get(uid)
             if status != 200:
                 return {'message': f'User ID {uid} not a valid GitHub account' }, 404
             
@@ -87,7 +88,7 @@ class UserAPI:
             user_obj = User(name=name, uid=uid)
             
             ''' #2: Add user to database '''
-            user = user_obj.create(body)
+            user = user_obj.create(body) # pass the body elements to be saved in the database
             if not user: # failure returns error message
                 return {'message': f'Processed {name}, either a format error or User ID {uid} is duplicate'}, 400
             
@@ -135,6 +136,13 @@ class UserAPI:
                 # Non-admin can only update themselves
                 user = current_user
                 
+            # Accounts are desired to be GitHub accounts, change must be validated 
+            if body.get('uid') and body.get('uid') != user._uid:
+                _, status = GitHubUser().get(body.get('uid'))
+                if status != 200:
+                    return {'message': f'User ID {body.get("uid")} not a valid GitHub account' }, 404
+            
+            ''' Update the user object with the new data ''' 
             user.update(body)
             
             ''' Return the updated user details as a JSON object '''
