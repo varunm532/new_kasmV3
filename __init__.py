@@ -7,6 +7,9 @@ import os
 from sqlalchemy import create_engine
 from dotenv import load_dotenv
 
+# Load environment variables from .env file
+load_dotenv()
+
 # Setup of key Flask object (app)
 app = Flask(__name__)
 
@@ -16,9 +19,6 @@ login_manager.init_app(app)
 
 # Allowed servers for cross-origin resource sharing (CORS), these are GitHub Pages and localhost for GitHub Pages testing
 cors = CORS(app, supports_credentials=True, origins=['http://localhost:4100', 'http://127.0.0.1:4100', 'https://nighthawkcoders.github.io'])
-
-# load all secrets from .env file
-load_dotenv() 
 
 # System Defaults
 DEFAULT_PASSWORD = os.environ.get('DEFAULT_PASSWORD') or 'password'
@@ -63,6 +63,8 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 # GITHUB settings
 app.config['GITHUB_API_URL'] = 'https://api.github.com'
 app.config['GITHUB_TOKEN'] = os.environ.get('GITHUB_TOKEN') or None
+app.config['GITHUB_TARGET_TYPE'] = os.environ.get('GITHUB_TARGET_TYPE') or 'user'
+app.config['GITHUB_TARGET_NAME'] = os.environ.get('GITHUB_TARGET_NAME') or 'nighthawkcoders'
 
 # KASM settings
 app.config['KASM_SERVER'] = os.environ.get('KASM_SERVER') or 'https://kasm.nighthawkcodingsociety.com'
