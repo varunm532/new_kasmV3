@@ -34,8 +34,9 @@ class UserProfileLinks(Resource):
 class UserCommits(Resource):
     def get(self, uid):
         try:
-            start_date = request.args.get('start_date')
-            end_date = request.args.get('end_date')
+            body = request.get_json()
+            start_date = body.get('start_date')
+            end_date = body.get('end_date')
             if not start_date or not end_date:
                 return {'message': 'start_date and end_date parameters are required'}, 400
 

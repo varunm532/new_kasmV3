@@ -1,4 +1,5 @@
 from flask_restful import Resource
+from datetime import datetime
 import requests
 from __init__ import app
 
@@ -34,9 +35,16 @@ class GitHubUser(Resource):
         }
         return profile_links, 200
 
-    def get_commit_stats(self, uid, start_date, end_date):
-        url = app.config['GITHUB_API_GRAPHQL_URL']
+    def get_commit_stats(self, uid, start_date_str, end_date_str):
+        url = "https://api.github.com/graphql" 
         token = app.config['GITHUB_TOKEN']
+        # Convert to datetime objects
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
+        # Convert to ISO 8601 format
+        start_date_iso = start_date.strftime('%Y-%m-%dT%H:%M:%SZ')
+        end_date_iso = end_date.strftime('%Y-%m-%dT%H:%M:%SZ')
+        
         if not token:
             return {'message': 'GITHUB_TOKEN not set'}, 400
 
@@ -48,11 +56,12 @@ class GitHubUser(Resource):
                 }
             }
         }
+        # ten_days_before_now = (datetime.utcnow() - timedelta(days=10)).strftime('%Y-%m-%dT%H:%M:%SZ')
         """
         variables = {
             "login": uid,
-            "from": start_date,
-            "to": end_date
+            "from": start_date_iso,
+            "to": end_date_iso
         }
         try:
             headers = {'Authorization': f'bearer {token}'}
