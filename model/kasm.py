@@ -65,15 +65,8 @@ class KasmCreateUser(Resource):
             print(response)
 
 class KasmDeleteUser(Resource):
-
     @staticmethod
-    def get_user_id(users, target_username):
-        for user in users:
-            if user['username'] == target_username:
-                return user['user_id']
-        return None
-
-    def post(self, uid):
+    def authenticate():
         # Checking if system has the required environment variables
         KASM_SERVER = app.config['KASM_SERVER'] 
         KASM_API_KEY = app.config['KASM_API_KEY'] 
@@ -93,6 +86,17 @@ class KasmDeleteUser(Resource):
             except:
                 return {'message': 'Invalid credentials'}, 401
 
+    @staticmethod
+    def get_user_id(users, target_username):
+        for user in users:
+            if user['username'] == target_username:
+                print("User found with username: " + target_username)
+                print("User ID: " + user['user_id'])
+                return user['user_id']
+        return None
+    
+    @staticmethod
+    def get_users(KASM_SERVER, KASM_API_KEY, KASM_API_KEY_SECRET):
         try:
             url = KASM_SERVER + "/api/public/get_users"
             data={
@@ -104,11 +108,40 @@ class KasmDeleteUser(Resource):
                 return {'message': 'Invalid credentials'}, 401
             
             users = response.json()['users']  # This should be your users list
-            user_id = self.get_user_id(users, uid)
-            if user_id is None:
-                return {'message': f'User {uid} not found'}, 404
-            
-            print("Deleting user with username: " + uid)
-
         except:
             return {'message': 'Invalid credentials'}, 401
+        return users
+        
+    @staticmethod
+    def delete_user(KASM_SERVER, KASM_API_KEY, KASM_API_KEY_SECRET, uid):
+        try:
+            url = KASM_SERVER + "/api/public/delete_user"
+            data={
+                "api_key": KASM_API_KEY,
+                "api_key_secret": KASM_API_KEY_SECRET,
+                     "target_user": {
+                    "user_id": uid
+                },
+                "force": False
+            }
+            response = requests.post(url, json=data)
+            if response.status_code == 401:
+                return {'message': 'Invalid credentials'}, 401
+        except:
+            return {'message': 'Invalid credentials'}, 401
+        return response
+
+    def post(self, user):
+        # Checking if system has the required environment variables
+        KASM_SERVER = app.config['KASM_SERVER'] 
+        KASM_API_KEY = app.config['KASM_API_KEY'] 
+        KASM_API_KEY_SECRET = app.config['KASM_API_KEY_SECRET'] 
+        if not KASM_SERVER or not KASM_API_KEY or not KASM_API_KEY_SECRET:
+            return {'message': '1 or more KASM keys are required to create a user'}, 400
+        self.authenticate()
+        user_id = self.get_user_id(self.get_users(KASM_SERVER, KASM_API_KEY, KASM_API_KEY_SECRET), user)
+        if user_id is None:
+            return {'message': f'User {user} not found'}, 404
+        self.delete_user(KASM_SERVER, KASM_API_KEY, KASM_API_KEY_SECRET, user_id)
+        
+        print("Deleting user with username: " + user + " and user_id: " + user_id)
