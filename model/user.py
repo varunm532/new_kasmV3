@@ -1,16 +1,15 @@
 """ database dependencies to support sqliteDB examples """
-from random import randrange
-from datetime import date
-import os, base64
-import json
 from flask import current_app
-
 from flask_login import UserMixin
-
+import os
+import json
+from datetime import date
 from __init__ import app, db
+from model.github import GitHubUser
+from model.kasm import KasmUser
+from model.stocks import StockUser
 from sqlalchemy.exc import IntegrityError
 from werkzeug.security import generate_password_hash, check_password_hash
-from model.stocks import StockUser
 
 
 """ Helper Functions """
@@ -138,6 +137,7 @@ class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     _name = db.Column(db.String(255), unique=False, nullable=False)
     _uid = db.Column(db.String(255), unique=True, nullable=False)
+    _email = db.Column(db.String(255), unique=False, nullable=False)
     _password = db.Column(db.String(255), unique=False, nullable=False)
     _role = db.Column(db.String(20), default="User", nullable=False)
     _pfp = db.Column(db.String(255), unique=False, nullable=True)
@@ -153,12 +153,13 @@ class User(db.Model, UserMixin):
     def __init__(self, name, uid, password=app.config["DEFAULT_PASSWORD"], kasm_server_needed=False, role="User", pfp=''):
         self._name = name
         self._uid = uid
+        self._email = "?"
         self.set_password(password)
         self.kasm_server_needed = kasm_server_needed
         self._role = role
         self._pfp = pfp
 
-    # UserMixin/Flask-Login require a get_id method to return the id as a string
+    # UserMixin/Flask-Login requires a get_id method to return the id as a string
     def get_id(self):
         return str(self.id)
 
@@ -176,6 +177,27 @@ class User(db.Model, UserMixin):
     @property
     def is_anonymous(self):
         return False
+    
+    # validate uid is a unique GitHub username
+    @property
+    def email(self):
+        return self._email
+    
+    @email.setter
+    def email(self, email):
+        if email is None or email == "":
+            self._email = "?"
+        else:
+            self._email = email
+        
+    def set_email(self):
+        """Set the email of the user based on the UID, the GitHub username."""
+        data, status = GitHubUser().get(self._uid)
+        if status == 200:
+            self.email = data.get("email", "?")
+            pass
+        else:
+            self.email = "?"
 
     # a name getter method, extracts name from object
     @property
@@ -205,7 +227,8 @@ class User(db.Model, UserMixin):
     def password(self):
         return self._password[0:10] + "..."  # because of security only show 1st characters
 
-    # update password, this is conventional setter
+            
+    # set password, this is conventional setter with business logic
     def set_password(self, password):
         """Create a hashed password."""
         self._password = generate_password_hash(password, "pbkdf2:sha256", salt_length=10)
@@ -244,10 +267,12 @@ class User(db.Model, UserMixin):
 
     # CRUD create/add a new record to the table
     # returns self or None on error
-    def create(self):
+    def create(self, inputs=None):
         try:
             db.session.add(self)  # add prepares to persist person object to Users table
             db.session.commit()  # SqlAlchemy "unit of work pattern" requires a manual commit
+            if inputs:
+                self.update(inputs)
             return self
         except IntegrityError:
             db.session.rollback()
@@ -258,8 +283,9 @@ class User(db.Model, UserMixin):
     def read(self):
         data = {
             "id": self.id,
-            "name": self.name,
             "uid": self.uid,
+            "name": self.name,
+            "email": self.email,
             "role": self._role,
             "pfp": self._pfp,
             "kasm_server_needed": self.kasm_server_needed,
@@ -270,33 +296,54 @@ class User(db.Model, UserMixin):
         
     # CRUD update: updates user name, password, phone
     # returns self
-    def update(self, name="", uid="", password="", pfp=None, kasm_server_needed=None):
-        """only updates values with length"""
+    def update(self, inputs):
+        if not isinstance(inputs, dict):
+            return self
+
+        name = inputs.get("name", "")
+        uid = inputs.get("uid", "")
+        password = inputs.get("password", "")
+        pfp = inputs.get("pfp", None)
+        kasm_server_needed = inputs.get("kasm_server_needed", None)
+
+        old_uid = self.uid
         if len(name) > 0:
             self.name = name
         if len(uid) > 0:
-            self.uid = uid
+            self.set_uid(uid) 
         if len(password) > 0:
             self.set_password(password)
-        if pfp is not None:  # here we explicitly check for None to allow setting pfp to None
+        if pfp is not None: 
             self.pfp = pfp
         if kasm_server_needed is not None:
-            self.kasm_server_needed = kasm_server_needed
-        db.session.commit()
+            self.kasm_server_needed = bool(kasm_server_needed)
+
+        # Check this on each update 
+        self.set_email()
+        # We need to remove old Kasm user if uid changes
+        if old_uid != self.uid:
+            pass
+            # KasmUser().delete(old_uid)
+        KasmUser().post(self.name, self.uid, password 
+                                        if len(password) > 0 else app.config["DEFAULT_PASSWORD"])
+
+        try:
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            return None
         return self
     
     # CRUD delete: remove self
     # None
     def delete(self):
-        db.session.delete(self)
-        db.session.commit()
-        return None
-   
-    def save(self):
-        """Save user to database."""
-        db.session.commit()
-        return
-     
+        try:
+            db.session.delete(self)
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+        return None   
+    
     def save_pfp(self, image_data, filename):
         """For saving profile picture."""
         try:
@@ -306,7 +353,7 @@ class User(db.Model, UserMixin):
             file_path = os.path.join(user_dir, filename)
             with open(file_path, 'wb') as img_file:
                 img_file.write(image_data)
-            self.update(pfp=filename)
+            self.update({"pfp": filename})
         except Exception as e:
             raise e
         
@@ -419,7 +466,7 @@ class User(db.Model, UserMixin):
             print(f"Unexpected error removing sections: {e}") # Log the unexpected error
             return False
         
-    def update_uid(self, new_uid=None):
+    def set_uid(self, new_uid=None):
         """
         Update the user's directory based on the new UID provided.
 
@@ -440,8 +487,6 @@ class User(db.Model, UserMixin):
             new_path = os.path.join(current_app.config['UPLOAD_FOLDER'], self._uid)
             if os.path.exists(old_path):
                 os.rename(old_path, new_path)
-        # Return the updated user object
-        return self
 
     def add_stockuser(self):
         """
@@ -471,10 +516,8 @@ def initUsers():
         
         u1 = User(name='Thomas Edison', uid='toby', password='123toby', pfp='toby.png', kasm_server_needed=True, role="Admin")
         u2 = User(name='Nicholas Tesla', uid='niko', password='123niko', pfp='niko.png', kasm_server_needed=False)
-        u3 = User(name='Alexander Graham Bell', uid='lex', password='123lex', pfp='lex.png', kasm_server_needed=True)
-        u4 = User(name='Grace Hopper', uid='hop', password='123hop', pfp='hop.png', kasm_server_needed=False)
-        u5 = User(name='Fred Flintstone', uid='fred', pfp='fred.png', kasm_server_needed=True)
-        users = [u1, u2, u3, u4, u5]
+        u3 = User(name='Grace Hopper', uid='hop', password='123hop', pfp='hop.png', kasm_server_needed=False)
+        users = [u1, u2, u3]
         
         for user in users:
             try:
@@ -502,7 +545,5 @@ def initUsers():
         u1.add_section(s2)
         u2.add_section(s2)
         u2.add_section(s3)
-        u3.add_section(s3)
-        u4.add_section(s4)
-        u4.add_section(s4)
+        u3.add_section(s4)
         

@@ -5,7 +5,8 @@ from datetime import datetime
 from __init__ import app
 from api.jwt_authorize import token_required
 from model.user import User
-from model.kasm import KasmCreateUser
+from model.github import GitHubUser
+from model.kasm import KasmUser
 
 user_api = Blueprint('user_api', __name__,
                    url_prefix='/api')
@@ -72,45 +73,25 @@ class UserAPI:
             password = body.get('password')
             if name is None or len(name) < 2:
                 return {'message': f'Name is missing, or is less than 2 characters'}, 400
+            
             # validate uid
             uid = body.get('uid')
             if uid is None or len(uid) < 2:
                 return {'message': f'User ID is missing, or is less than 2 characters'}, 400
-            # look for kasm_server_needed
-            kasm_server_needed = body.get('kasm_server_needed')
-            if kasm_server_needed is None:
-                kasm_server_needed = False
-            else:
-                kasm_server_needed = bool(kasm_server_needed)
-                
-            # look for additional fields 
-            password = body.get('password')
-            dob = body.get('dob')
-
-            ''' #1: Key code block, setup USER OBJECT '''
-            uo = User(name=name, 
-                      uid=uid,
-                      kasm_server_needed=kasm_server_needed)
+          
+            # Accounts are desired to be GitHub accounts, create must be validated 
+            _, status = GitHubUser().get(uid)
+            if status != 200:
+                return {'message': f'User ID {uid} not a valid GitHub account' }, 404
             
-            ''' Additional garbage error checking '''
-            # set password if provided
-            if password is not None:
-                uo.set_password(password)
-            # convert to date type
-            if dob is not None:
-                try:
-                    uo.dob = datetime.strptime(dob, '%Y-%m-%d').date()
-                except:
-                    return {'message': f'Date of birth format error {dob}, must be mm-dd-yyyy'}, 400
+            ''' #1: Setup minimal USER OBJECT '''
+            user_obj = User(name=name, uid=uid)
             
-            ''' #2: Key Code block to add user to database '''
-            user = uo.create()
+            ''' #2: Add user to database '''
+            user = user_obj.create(body) # pass the body elements to be saved in the database
             if not user: # failure returns error message
                 return {'message': f'Processed {name}, either a format error or User ID {uid} is duplicate'}, 400
             
-            # success returns json of user
-            if kasm_server_needed:
-                KasmCreateUser().post(name, uid, password)
             return jsonify(user.read())
 
         @token_required()
@@ -154,29 +135,15 @@ class UserAPI:
             else:
                 # Non-admin can only update themselves
                 user = current_user
-
-            # Update UID if provided, this will not work for Admins as implemented 
-            uid = body.get('uid') 
-            if uid is not None and uid != user.uid:
-                user.update_uid(new_uid=uid)
                 
-            # Update password if provided 
-            password = body.get('password')
-            if password:
-                user.set_password(password)
-
-            # Update name if provided in the request body
-            name = body.get('name')
-            if name:
-                user.name = name
-                
-            # Update Kasm server requirement if provided in the request body
-            kasm_server_needed = body.get('kasm_server_needed')
-            if kasm_server_needed is not None:
-                user.kasm_server_needed = bool(kasm_server_needed)
-
-            # Save changes to the database
-            user.save()
+            # Accounts are desired to be GitHub accounts, change must be validated 
+            if body.get('uid') and body.get('uid') != user._uid:
+                _, status = GitHubUser().get(body.get('uid'))
+                if status != 200:
+                    return {'message': f'User ID {body.get("uid")} not a valid GitHub account' }, 404
+            
+            ''' Update the user object with the new data ''' 
+            user.update(body)
             
             ''' Return the updated user details as a JSON object '''
             return jsonify(user.read())
@@ -290,7 +257,7 @@ class UserAPI:
                     
                     return {'message': f"Invalid user id or password"}, 401
                             
-                            # Check if user is found
+                # Check if user is found
                 if user:
                     try:
                         token = jwt.encode(

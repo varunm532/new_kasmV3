@@ -15,6 +15,7 @@ from api.user import user_api
 from api.section import section_api
 from api.pfp import pfp_api
 from api.stock import stock_api
+from api.analytics import analytics_api
 # database Initialization functions
 from model.user import User, initUsers
 # server only Views
@@ -24,6 +25,7 @@ app.register_blueprint(user_api)
 app.register_blueprint(section_api)
 app.register_blueprint(pfp_api) 
 app.register_blueprint(stock_api)
+app.register_blueprint(analytics_api)
 
 # Tell Flask-Login the view function name of your login route
 login_manager.login_view = "login"
@@ -114,7 +116,7 @@ def reset_password(user_id):
         return jsonify({'error': 'User not found'}), 404
 
     # Set the new password
-    if user.update(password=app.config['DEFAULT_PASSWORD']):
+    if user.update({"password": app.config['DEFAULT_PASSWORD']}):
         return jsonify({'message': 'Password reset successfully'}), 200
     return jsonify({'error': 'Password reset failed'}), 500
 

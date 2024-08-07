@@ -1,4 +1,4 @@
-#  README
+# README
 
 > This is a project to support AP Computer Science Principles (CSP) as well as a UC articulated Data Structures course. It was crafted iteratively starting in 2020 to the present time.  The primary purposes are ...
 
