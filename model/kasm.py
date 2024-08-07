@@ -63,3 +63,52 @@ class KasmCreateUser(Resource):
             # send a post request to the kasm server
             response = requests.post(kasm_url, json=kasm_data)
             print(response)
+
+class KasmDeleteUser(Resource):
+
+    @staticmethod
+    def get_user_id(users, target_username):
+        for user in users:
+            if user['username'] == target_username:
+                return user['user_id']
+        return None
+
+    def post(self, uid):
+        # Checking if system has the required environment variables
+        KASM_SERVER = app.config['KASM_SERVER'] 
+        KASM_API_KEY = app.config['KASM_API_KEY'] 
+        KASM_API_KEY_SECRET = app.config['KASM_API_KEY_SECRET'] 
+        if not KASM_SERVER or not KASM_API_KEY or not KASM_API_KEY_SECRET:
+            return {'message': '1 or more KASM keys are required to create a user'}, 400
+        else:
+            try:
+                url = KASM_SERVER + "/api/public/validate_credentials" 
+                data={
+                    "api_key": KASM_API_KEY,
+                    "api_key_secret": KASM_API_KEY_SECRET 
+                }
+                response = requests.post(url, json=data)
+                if response.status_code == 401:
+                    return {'message': 'Invalid credentials'}, 401
+            except:
+                return {'message': 'Invalid credentials'}, 401
+
+        try:
+            url = KASM_SERVER + "/api/public/get_users"
+            data={
+                "api_key": KASM_API_KEY,
+                "api_key_secret": KASM_API_KEY_SECRET
+            }
+            response = requests.post(url, json=data)
+            if response.status_code == 401:
+                return {'message': 'Invalid credentials'}, 401
+            
+            users = response.json()['users']  # This should be your users list
+            user_id = self.get_user_id(users, uid)
+            if user_id is None:
+                return {'message': f'User {uid} not found'}, 404
+            
+            print("Deleting user with username: " + uid)
+
+        except:
+            return {'message': 'Invalid credentials'}, 401
