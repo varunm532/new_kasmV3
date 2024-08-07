@@ -257,7 +257,7 @@ class UserAPI:
                     
                     return {'message': f"Invalid user id or password"}, 401
                             
-                            # Check if user is found
+                # Check if user is found
                 if user:
                     try:
                         token = jwt.encode(
