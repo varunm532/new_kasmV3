@@ -1,15 +1,16 @@
 """ database dependencies to support sqliteDB examples """
 from flask import current_app
 from flask_login import UserMixin
+from datetime import date
+from sqlalchemy.exc import IntegrityError
+from werkzeug.security import generate_password_hash, check_password_hash
 import os
 import json
-from datetime import date
+
 from __init__ import app, db
 from model.github import GitHubUser
 from model.kasm import KasmUser
 from model.stocks import StockUser
-from sqlalchemy.exc import IntegrityError
-from werkzeug.security import generate_password_hash, check_password_hash
 
 
 """ Helper Functions """
@@ -315,19 +316,20 @@ class User(db.Model, UserMixin):
             self.set_password(password)
         if pfp is not None: 
             self.pfp = pfp
-        if kasm_server_needed is not None:
-            self.kasm_server_needed = bool(kasm_server_needed)
-
+        
         # Check this on each update 
         self.set_email()
         
-        # We need to remove Kasm server in these cases
-        if not kasm_server_needed or old_uid != self.uid:
-            KasmUser().delete(old_uid)
-            
-        if self.kasm_server_needed:
-            KasmUser().post(self.name, self.uid, password 
-                                        if len(password) > 0 else app.config["DEFAULT_PASSWORD"])
+        if kasm_server_needed is not None:
+            self.kasm_server_needed = bool(kasm_server_needed)
+        
+            # We need to remove Kasm server in these cases
+            if not kasm_server_needed or old_uid != self.uid:
+                KasmUser().delete(old_uid)
+                
+            if kasm_server_needed:
+                KasmUser().post(self.name, self.uid, password 
+                                if len(password) > 0 else app.config["DEFAULT_PASSWORD"])
 
         try:
             db.session.commit()
@@ -517,9 +519,9 @@ def initUsers():
         db.create_all()
         """Tester data for table"""
         
-        u1 = User(name='Thomas Edison', uid='toby', password='123toby', pfp='toby.png', kasm_server_needed=True, role="Admin")
-        u2 = User(name='Nicholas Tesla', uid='niko', password='123niko', pfp='niko.png', kasm_server_needed=False)
-        u3 = User(name='Grace Hopper', uid='hop', password='123hop', pfp='hop.png', kasm_server_needed=False)
+        u1 = User(name='Thomas Edison', uid=app.config['ADMIN_USER'], password=app.config['ADMIN_PASSWORD'], pfp='toby.png', kasm_server_needed=True, role="Admin")
+        u2 = User(name='Grace Hopper', uid=app.config['DEFAULT_USER'], password=app.config['DEFAULT_PASSWORD'], pfp='hop.png', kasm_server_needed=False)
+        u3 = User(name='Nicholas Tesla', uid='niko', password='123niko', pfp='niko.png', kasm_server_needed=False)
         users = [u1, u2, u3]
         
         for user in users:

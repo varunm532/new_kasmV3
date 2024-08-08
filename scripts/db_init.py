@@ -75,16 +75,6 @@ with app.app_context():
         # Add default test data 
         initUsers() # test data
         
-        # Step 2: Old data extraction
-        old_data_url = "https://devops.nighthawkcodingsociety.com/api/users/2025"
-        response = requests.get(old_data_url)
-        if response.status_code == 200:
-            old_data = response.json()
-            print("Old data extracted successfully.")
-        else:
-            print(f"Failed to extract old data. Status code: {response.status_code}")
-            sys.exit(1)
-        
         # Step 3: Load data into the new database using Flask's test client
         with app.test_client() as client:
             post_response = client.post('/api/users', json=old_data)

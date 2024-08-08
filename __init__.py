@@ -3,9 +3,8 @@ from flask_login import LoginManager
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-import os
-from sqlalchemy import create_engine
 from dotenv import load_dotenv
+import os
 
 # Load environment variables from .env file
 load_dotenv()
@@ -21,8 +20,10 @@ login_manager.init_app(app)
 cors = CORS(app, supports_credentials=True, origins=['http://localhost:4100', 'http://127.0.0.1:4100', 'https://nighthawkcoders.github.io'])
 
 # System Defaults
-DEFAULT_PASSWORD = os.environ.get('DEFAULT_PASSWORD') or 'password'
-app.config['DEFAULT_PASSWORD'] = DEFAULT_PASSWORD
+app.config['ADMIN_USER'] = os.environ.get('ADMIN_USER') or 'admin'
+app.config['ADMIM_PASSWORD'] = os.environ.get('ADMIM_PASSWORD') or 'password'
+app.config['DEFAULT_USER'] = os.environ.get('DEFAULT_USER') or 'user'
+app.config['DEFAULT_PASSWORD'] = os.environ.get('DEFAULT_PASSWORD') or 'password'
 
 # Browser settings
 SECRET_KEY = os.environ.get('SECRET_KEY') or 'SECRET_KEY' # secret key for session management

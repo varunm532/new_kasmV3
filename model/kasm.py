@@ -9,7 +9,7 @@ class KasmUtils:
         API_KEY = app.config.get('KASM_API_KEY')
         API_KEY_SECRET = app.config.get('KASM_API_KEY_SECRET')
         if not SERVER or not API_KEY or not API_KEY_SECRET:
-            return None, {'message': '1 or more keys are required to create a user', 'code': 400}
+            return None, {'message': '1 or more KASM keys are missing to create a user', 'code': 400}
         return (SERVER, API_KEY, API_KEY_SECRET), None
 
     @staticmethod
@@ -191,7 +191,7 @@ class KasmUser:
         # Find the requested user_id, Kasm reference number to uid
         user_id = KasmUtils.get_user_id(users, uid)
         if user_id is None:
-            print({'message': f'User {uid} not found', 'code': 404})
+            print({'message': f'Kasm user {uid} not found for delete', 'code': 404})
             return
 
         # Attempt to delete the user
