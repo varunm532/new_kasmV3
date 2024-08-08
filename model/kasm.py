@@ -34,7 +34,8 @@ class KasmUtils:
         '''Find the requested uid in the list Kasm users'''
         for user in users:
             # Kasm username maps to uid from the request
-            if user['username'] == uid:
+            if user['username'].lower() == uid.lower():
+                # kasm user_id is the reference number for the user
                 return user['user_id']
         return None
 
@@ -189,13 +190,13 @@ class KasmUser:
             return
         
         # Find the requested user_id, Kasm reference number to uid
-        user_id = KasmUtils.get_user_id(users, uid)
-        if user_id is None:
+        kasm_user_id = KasmUtils.get_user_id(users, uid)
+        if kasm_user_id is None:
             print({'message': f'Kasm user {uid} not found for delete', 'code': 404})
             return
 
         # Attempt to delete the user
-        response, error = KasmUtils.delete_user(config, user_id)
+        response, error = KasmUtils.delete_user(config, kasm_user_id)
         if error:
             print(error)
             return
