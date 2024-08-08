@@ -6,7 +6,7 @@ import json
 from datetime import date
 from __init__ import app, db
 from model.github import GitHubUser
-from model.kasm import KasmCreateUser, KasmDeleteUser
+from model.kasm import KasmUser
 from model.stocks import StockUser
 from sqlalchemy.exc import IntegrityError
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -320,10 +320,13 @@ class User(db.Model, UserMixin):
 
         # Check this on each update 
         self.set_email()
-        # We need to remove old Kasm user if uid changes
-        if old_uid != self.uid:
-            KasmDeleteUser().post(old_uid)
-        KasmCreateUser().post(self.name, self.uid, password 
+        
+        # We need to remove Kasm server in these cases
+        if not kasm_server_needed or old_uid != self.uid:
+            KasmUser().delete(old_uid)
+            
+        if self.kasm_server_needed:
+            KasmUser().post(self.name, self.uid, password 
                                         if len(password) > 0 else app.config["DEFAULT_PASSWORD"])
 
         try:
@@ -337,7 +340,7 @@ class User(db.Model, UserMixin):
     # None
     def delete(self):
         try:
-            KasmDeleteUser().post(self.uid)
+            KasmUser().delete(self.uid)
             db.session.delete(self)
             db.session.commit()
         except IntegrityError:
