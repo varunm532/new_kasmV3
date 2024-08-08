@@ -6,7 +6,7 @@ from __init__ import app
 from api.jwt_authorize import token_required
 from model.user import User
 from model.github import GitHubUser
-from model.kasm import KasmUser
+from model.kasm import KasmCreateUser, KasmDeleteUser
 
 user_api = Blueprint('user_api', __name__,
                    url_prefix='/api')
