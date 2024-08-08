@@ -257,7 +257,7 @@ class StockTransaction(db.Model):
         self._user_id = user_id
         self._transaction_type = transaction_type
         self._quantity = quantity
-        self._transaction_date = date.today()
+        self._transaction_date = transaction_date
 
     @property
     def user_id(self):
@@ -314,21 +314,40 @@ class StockTransaction(db.Model):
             "transaction_date": self._transaction_date
         }
     # creates buy log in transaction table
-    def createlog_initialbuy(self,body):
+    def createlog_initialbuy(self, body):
         uid = body.get("uid")
         quantity = body.get("quantity")
-        transactiontype = 'buy'
+        transactiontype = 'buy'     
         try:
-            user = StockUser.query.filter_by(_uid = uid).first()
+            # Query the user with the given uid
+            user = StockUser.query.filter_by(_uid=uid).first()
+
+            # Get the current date
             current_date = date.today()
-# Subtract one year from the current date
-            new_date = current_date - relativedelta(years=1)
-            stock_user = StockTransaction(user_id=user.id, transaction_type=transactiontype, transaction_date=new_date,quantity=quantity)
+
+            # Subtract one year from the current date by adjusting the year attribute
+            new_date = current_date.replace(year=current_date.year - 1)
+
+            # Create a new StockTransaction object
+            stock_user = StockTransaction(
+                user_id=user.id,
+                transaction_type=transactiontype,
+                transaction_date=new_date,
+                quantity=quantity
+            )
+
+            # Add the new transaction to the database session
             db.session.add(stock_user)
+
+            # Commit the transaction to the database
             db.session.commit()
+
+            # Return the id of the newly created transaction
             return stock_user.id
+    
         except Exception as e:
-            return {"error": "account has not been autocreated for stock game. Run /initilize first to log user in StockUser table"},500
+            # Return an error message if an exception occurs
+            return {"error": f"account has not been autocreated for {uid}, error: {str(e)}"}
         
     def createlog_buy(self,body):
         uid = body.get('uid')
