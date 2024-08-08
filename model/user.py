@@ -322,8 +322,7 @@ class User(db.Model, UserMixin):
         self.set_email()
         # We need to remove old Kasm user if uid changes
         if old_uid != self.uid:
-            pass
-        KasmDeleteUser().post(old_uid)
+            KasmDeleteUser().post(old_uid)
         KasmCreateUser().post(self.name, self.uid, password 
                                         if len(password) > 0 else app.config["DEFAULT_PASSWORD"])
 
@@ -338,6 +337,7 @@ class User(db.Model, UserMixin):
     # None
     def delete(self):
         try:
+            KasmDeleteUser().post(self.uid)
             db.session.delete(self)
             db.session.commit()
         except IntegrityError:
