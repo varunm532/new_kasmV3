@@ -5,11 +5,11 @@ class KasmUtils:
     @staticmethod
     def get_config():
         '''Utility method to get KASM keys'''
-        SERVER = app.config['KASM_SERVER']
-        API_KEY = app.config['KASM_API_KEY']
-        API_KEY_SECRET = app.config['KASM_API_KEY_SECRET']
+        SERVER = app.config.get('KASM_SERVER')
+        API_KEY = app.config.get('KASM_API_KEY')
+        API_KEY_SECRET = app.config.get('KASM_API_KEY_SECRET')
         if not SERVER or not API_KEY or not API_KEY_SECRET:
-            return None, {'message': '1 or more keys are required to create a user'}, 400
+            return None, {'message': '1 or more keys are required to create a user', 'code': 400}
         return (SERVER, API_KEY, API_KEY_SECRET), None
 
     @staticmethod
@@ -23,10 +23,11 @@ class KasmUtils:
                 "api_key_secret": API_KEY_SECRET
             }
             response = requests.post(url, json=data)
-            if response.status_code == 401:
-                return {'message': 'Invalid credentials'}, 401
-        except:
-            return {'message': 'Invalid credentials'}, 401
+            if response.status_code != 200:
+                return None, response
+        except requests.RequestException as e:
+            return None, {'message': 'Failed to authenticate', 'code': 500, 'error': str(e)}
+        return response, None
 
     @staticmethod
     def get_user_id(users, uid):
@@ -50,12 +51,12 @@ class KasmUtils:
             }
             response = requests.post(url, json=data)
             if response.status_code != 200:
-                return None
+                return None, {'message': 'Failed to get users', 'code': response.status_code}
 
             users = response.json()['users']  # This should be your users list
         except:
-            return None 
-        return users
+            return None, {'message': 'Failed to get users', 'code': 500}
+        return users, None
     
     @staticmethod
     def create_user(config, uid, first_name, last_name, password):
@@ -80,10 +81,12 @@ class KasmUtils:
             }
             response = requests.post(url, json=data)
             if response.status_code != 200:
-                return None 
-        except:
-            return None
-        return response
+                return None, response
+             
+        except requests.RequestException as e:
+            return None, {'message': 'Failed to create user', 'code': 500, 'error': str(e)}
+        
+        return response, None
             
     @staticmethod
     def delete_user(config, user_id):
@@ -102,10 +105,12 @@ class KasmUtils:
             }
             response = requests.post(url, json=data)
             if response.status_code != 200:
-                return None
-        except:
-            return None
-        return response
+                return None, response 
+            
+        except requests.RequestException as e:
+            return None, {'message': 'Failed to delete user', 'code': 500, 'error': str(e)}
+        
+        return response, None
 
 class KasmUser:
     def post(self, name, uid, password):
@@ -124,10 +129,10 @@ class KasmUser:
             print(error)
             return
 
-        # Check if KASM keys can authenticate
-        auth_error = KasmUtils.authenticate(config)
-        if auth_error:
-            print(auth_error)
+        # Check if KASM keys can authenticate, the "_" means data is not used
+        _, error = KasmUtils.authenticate(config)
+        if error:
+            print(error)
             return
 
         # Prepare data for KASM user creation
@@ -143,15 +148,17 @@ class KasmUser:
 
         # Check if password is provided
         if password is None:
-            print({'message': 'Password is required'}, 400)
+            print({'message': 'Password is required', 'code': 400})
             return 
         
         # Attempt to create a KASM user
-        response = KasmUtils.create_user(config, uid, first_name, last_name, password)
+        response, error = KasmUtils.create_user(config, uid, first_name, last_name, password)
+        if error:
+            print(error)
+            return
         
         # Debugging output 
         print(response)
-
 
     def delete(self, uid):
         '''
@@ -169,26 +176,29 @@ class KasmUser:
             print(error)
             return
 
-        # Check if KASM keys can authenticate
-        auth_error = KasmUtils.authenticate(config)
-        if auth_error:
-            print(auth_error)
+        # Check if KASM keys can authenticate, the "_" means data is not used
+        _, error = KasmUtils.authenticate(config)
+        if error:
+            print(error)
             return
         
         # Extract all KASM users
-        users = KasmUtils.get_users(config)
-        if users is None:
-            print({'message': 'Users {uid} not found'}, 404)
+        users, error = KasmUtils.get_users(config)
+        if error:
+            print(error)
             return
         
         # Find the requested user_id, Kasm reference number to uid
         user_id = KasmUtils.get_user_id(users, uid)
         if user_id is None:
-            print({'message': f'User {uid} not found'}, 404)
+            print({'message': f'User {uid} not found', 'code': 404})
             return
 
         # Attempt to delete the user
-        response = KasmUtils.delete_user(config, user_id)
+        response, error = KasmUtils.delete_user(config, user_id)
+        if error:
+            print(error)
+            return
 
         # Debugging output
         print(response)
