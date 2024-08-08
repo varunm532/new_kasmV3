@@ -95,7 +95,7 @@ class StockAPI:
                 StockUser.updatebal(self,body,transactionval)
                 # create stocktransacotin log
                 u=StockTransaction.createlog_initialbuy(self,body)
-                UserTransactionStock.multilog_buy(self,body = body,value = transactionval,transactionid=u)
+                UserTransactionStock.multilog_buy_initial(self,body = body,value = transactionval,transactionid=u)
                 # update stock quantity
                 TableStock.updatequantity(self,body,isbuy)
                 return jsonify("Transaction successful")

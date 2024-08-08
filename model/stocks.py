@@ -384,14 +384,14 @@ class UserTransactionStock(db.Model):
         backref=db.backref("user_transaction_stocks", cascade="all, delete-orphan", single_parent=True, overlaps="stock_transaction,stockuser")
     )
 
-    def __init__(self, user_id, transaction_id, stock_id, quantity, price_per_stock,transaction_amount):
+    def __init__(self, user_id, transaction_id, stock_id, quantity, price_per_stock,transaction_amount,transaction_time):
         self._user_id = user_id
         self._transaction_id = transaction_id
         self._stock_id = stock_id
         self._quantity = quantity
         self._price_per_stock = price_per_stock
         self._transaction_amount = transaction_amount
-
+        self._transaction_time = transaction_time
     def __repr__(self):
         return f'<UserTransactionStock {self._user_id} {self._transaction_id} {self._stock_id}>'
     @property
@@ -489,7 +489,29 @@ class UserTransactionStock(db.Model):
                 userid = StockUser.get_userid(self,uid)
                 stockid = TableStock.get_stockid(self,symbol)
                 stockprice = TableStock.get_price(self,body)
-                stock_transaction = UserTransactionStock(user_id=userid,transaction_id=transaction.id, stock_id=stockid, quantity=quantity,price_per_stock=stockprice,transaction_amount= value)
+                stock_transaction = UserTransactionStock(user_id=userid,transaction_id=transaction.id, stock_id=stockid, quantity=quantity,price_per_stock=stockprice,transaction_amount= value,transaction_time= date.today())
+                db.session.add(stock_transaction)
+                db.session.commit()
+            else:
+                print("error: transaction log has not been created yet")\
+                    
+    def multilog_buy_initial(self,body,value,transactionid):
+        transaction = StockTransaction.query.filter_by(id=transactionid).first()
+        uid = body.get("uid")
+        symbol = body.get("symbol")
+        quantity = body.get("quantity")
+        if transaction:
+            found = transaction.stock_transaction is not None
+            if not found:
+                user = StockUser.query.filter_by(_uid=uid).first()
+            # Get the current date
+                current_date = date.today()
+            # Subtract one year from the current date by adjusting the year attribute
+                new_date = current_date.replace(year=current_date.year - 1)
+                userid = StockUser.get_userid(self,uid)
+                stockid = TableStock.get_stockid(self,symbol)
+                stockprice = TableStock.get_price(self,body)
+                stock_transaction = UserTransactionStock(user_id=userid,transaction_id=transaction.id, stock_id=stockid, quantity=quantity,price_per_stock=stockprice,transaction_amount= value,transaction_time= new_date)
                 db.session.add(stock_transaction)
                 db.session.commit()
             else:
