@@ -126,7 +126,7 @@ class StockAPI:
         def post(self):
             body = request.get_json()
             symbol = body.get("symbol")
-            stockintransaction = UserTransactionStock.check_stock(self,body)
+            stockintransaction = UserTransactionStock.check_stock_quantity(self,body)
             if stockintransaction == True:
                 print("this works")
             else:

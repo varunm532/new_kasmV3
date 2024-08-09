@@ -516,11 +516,24 @@ class UserTransactionStock(db.Model):
                 db.session.commit()
             else:
                 print("error: transaction log has not been created yet")
-    def check_stock(self,body):
+    def check_stock_quantity(self,body):
         symbol = body.get("symbol")
+        uid = body.get("uid")
         stockid = TableStock.get_stockid(self,symbol)
+        userid = StockUser.get_userid(self,uid)
         try:
-            UserTransactionStock.query.filter(_stock_id = stockid)
+            s = list(UserTransactionStock.query.filter_by(_stock_id = stockid, _user_id = userid).all())
+            buy_list = []
+            sell_list = []
+            for i in s:
+                transactionid = i.transaction_id
+                transaction_type = StockTransaction.query.filter(StockTransaction.id == transactionid).value(StockTransaction._transaction_type)
+                if transaction_type == 'buy':
+                    buy_list.append(i)
+                    print(buy_list)
+                else:
+                    sell_list.append(i)
             return True
         except Exception as e:
             return {e}
+    
