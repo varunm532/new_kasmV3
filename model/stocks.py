@@ -525,15 +525,20 @@ class UserTransactionStock(db.Model):
             s = list(UserTransactionStock.query.filter_by(_stock_id = stockid, _user_id = userid).all())
             buy_list = []
             sell_list = []
+            num_buy = 0
+            num_sell = 0
             for i in s:
                 transactionid = i.transaction_id
                 transaction_type = StockTransaction.query.filter(StockTransaction.id == transactionid).value(StockTransaction._transaction_type)
                 if transaction_type == 'buy':
                     buy_list.append(i)
                     print(buy_list)
+                    num_buy += i.quantity
                 else:
                     sell_list.append(i)
-            return True
+                    num_sell += i.quantity
+            
+            return num_buy - num_sell
         except Exception as e:
             return {e}
     

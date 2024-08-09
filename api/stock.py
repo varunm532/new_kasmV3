@@ -125,10 +125,11 @@ class StockAPI:
     class _transaction_sell(Resource):
         def post(self):
             body = request.get_json()
+            quantity = body.get("quantity")
             symbol = body.get("symbol")
-            stockintransaction = UserTransactionStock.check_stock_quantity(self,body)
-            if stockintransaction == True:
-                print("this works")
+            avaliable_quantity = UserTransactionStock.check_stock_quantity(self,body)
+            if avaliable_quantity >= quantity :
+                pass
             else:
                 return jsonify({'error':'No stock to sell'}), 400
     class _Account_expirary(Resource):
