@@ -516,6 +516,38 @@ class UserTransactionStock(db.Model):
                 db.session.commit()
             else:
                 print("error: transaction log has not been created yet")
+    def check_tax(self,body):
+        symbol = body.get("symbol")
+        quantity = body.get("quantity")
+        uid = body.get("uid")
+        stockid = TableStock.get_stockid(self,symbol)
+        userid = StockUser.get_userid(self,uid)
+        one_year_ago = datetime.now() - timedelta(days=365)
+        try:
+            s = list(UserTransactionStock.query.filter_by(_stock_id = stockid, _user_id = userid).all())
+            buy_list = []
+            sell_list = []
+            one_year_list = []
+            less_one_year_list = []
+            
+            for i in s:
+                transactionid = i.transaction_id
+                transaction_type = StockTransaction.query.filter(StockTransaction.id == transactionid).value(StockTransaction._transaction_type)
+                if transaction_type == 'buy':
+                    buy_list.append(i)
+                else:
+                    sell_list.append(i)
+            for j in buy_list:
+                time = j._transaction_time
+                if time <= one_year_ago:
+                    one_year_list.append(j)
+                else:
+                    less_one_year_list.append(j)
+                print(str(one_year_list))
+                    
+                print(str(time))
+        except Exception as e:
+            return {e}
     def check_stock_quantity(self,body):
         symbol = body.get("symbol")
         uid = body.get("uid")

@@ -129,7 +129,7 @@ class StockAPI:
             symbol = body.get("symbol")
             avaliable_quantity = UserTransactionStock.check_stock_quantity(self,body)
             if avaliable_quantity >= quantity :
-                pass
+                UserTransactionStock.check_tax(self,body)
             else:
                 return jsonify({'error':'No stock to sell'}), 400
     class _Account_expirary(Resource):
