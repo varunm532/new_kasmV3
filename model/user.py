@@ -45,16 +45,15 @@ class UserSection(db.Model):
     section_id = db.Column(db.Integer, db.ForeignKey('sections.id'), primary_key=True)
     year = db.Column(db.Integer)
 
-    # Relationship backrefs
-    user = db.relationship("User", backref=db.backref("user_sections", cascade="all, delete-orphan"))
-    section = db.relationship("Section", backref=db.backref("user_sections", cascade="all, delete-orphan"))
-
+    user = db.relationship("User", backref=db.backref("user_sections_rel", cascade="all, delete-orphan"))
+    section = db.relationship("Section", backref=db.backref("section_users_rel", cascade="all, delete-orphan"), overlaps="users")
+    
     def __init__(self, user, section):
         self.user = user
         self.section = section
         self.year = default_year()
 
-# Define a many-to-many relationship to 'users' table
+
 class Section(db.Model):
     """
     Section Model
@@ -71,6 +70,9 @@ class Section(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     _name = db.Column(db.String(255), unique=False, nullable=False)
     _abbreviation = db.Column(db.String(255), unique=True, nullable=False)
+   
+    users = db.relationship('User', secondary=UserSection.__table__, lazy='subquery',
+                            backref=db.backref('section_users_rel', lazy=True), overlaps="section_users_rel,user_sections_rel,user")    
     
     # Constructor
     def __init__(self, name, abbreviation):
@@ -111,7 +113,6 @@ class Section(db.Model):
         return None
 
 
-# Define a User class that inherits from db.Model and UserMixin
 class User(db.Model, UserMixin):
     """
     User Model
@@ -132,9 +133,8 @@ class User(db.Model, UserMixin):
         kasm_server_needed (Column): A boolean indicating whether the user requires a Kasm server.
         sections (Relationship): A many-to-many relationship between users and sections, allowing users to be associated with multiple sections.
     """
-    __tablename__ = 'users'  # table name is plural, class name is singular
+    __tablename__ = 'users'
 
-    # Define the User schema with "vars" from object
     id = db.Column(db.Integer, primary_key=True)
     _name = db.Column(db.String(255), unique=False, nullable=False)
     _uid = db.Column(db.String(255), unique=True, nullable=False)
@@ -144,13 +144,10 @@ class User(db.Model, UserMixin):
     _pfp = db.Column(db.String(255), unique=False, nullable=True)
     kasm_server_needed = db.Column(db.Boolean, default=False)
     
-    # Relationship to manage the association between users and sections
     sections = db.relationship('Section', secondary=UserSection.__table__, lazy='subquery',
-                               backref=db.backref('users', lazy=True))
-    stock_user = db.relationship("StockUser", backref=db.backref("users", cascade="all"), lazy=True,uselist=False)
+                               backref=db.backref('user_sections_rel', lazy=True), overlaps="user_sections_rel,section,section_users_rel,user,users")
+    stock_user = db.relationship("StockUser", backref=db.backref("users", cascade="all"), lazy=True, uselist=False)
 
-
-    # Constructor of a User object, initializes the instance variables within object (self)
     def __init__(self, name, uid, password=app.config["DEFAULT_PASSWORD"], kasm_server_needed=False, role="User", pfp=''):
         self._name = name
         self._uid = uid
