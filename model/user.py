@@ -431,7 +431,7 @@ class User(db.Model, UserMixin):
         abbreviation = section_data.get("abbreviation", None)
         year = int(section_data.get("year", default_year()))  # Convert year to integer, default to 0 if not found
 
-        # Find the user_section that matches the provided abbreviation trhough the user_sections_rel backref
+        # Find the user_section that matches the provided abbreviation through the user_sections_rel backref
         section = next(
             (s for s in self.user_sections_rel if s.section.abbreviation == abbreviation),
             None
