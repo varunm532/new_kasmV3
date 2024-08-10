@@ -34,21 +34,25 @@ app.config['SESSION_COOKIE_NAME'] = SESSION_COOKIE_NAME
 app.config['JWT_TOKEN_NAME'] = JWT_TOKEN_NAME 
 
 # Database settings 
-dbName = 'user_management_db'
+dbName = 'user_management'
+DB_ENDPOINT = os.environ.get('DB_ENDPOINT') or None
 DB_USERNAME = os.environ.get('DB_USERNAME') or None
 DB_PASSWORD = os.environ.get('DB_PASSWORD') or None
-if DB_USERNAME and DB_PASSWORD:
+if DB_ENDPOINT and DB_USERNAME and DB_PASSWORD:
     # Production - Use MySQL
-    DB_HOST = 'kasm-student-db-instance.ctenoof0kzic.us-east-2.rds.amazonaws.com'
     DB_PORT = '3306'
-    DB_NAME = dbName 
-    dbURI = f'mysql+pymysql://{DB_USERNAME}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
+    DB_NAME = dbName
+    dbString = f'mysql+pymysql://{DB_USERNAME}:{DB_PASSWORD}@{DB_ENDPOINT}:{DB_PORT}'
+    dbURI =  dbString + '/' + dbName
     backupURI = None  # MySQL backup would require a different approach
 else:
     # Development - Use SQLite
-    dbURI = 'sqlite:///volumes/' + dbName + '.db'
-    backupURI = 'sqlite:///volumes/' + dbName + '_bak.db'
- 
+    dbString = 'sqlite:///volumes/'
+    dbURI = dbString + dbName + '.db'
+    backupURI = dbString + dbName + '_bak.db'
+
+app.config['SQLALCHEMY_DATABASE_NAME'] = dbName
+app.config['SQLALCHEMY_DATABASE_STRING'] = dbString
 app.config['SQLALCHEMY_DATABASE_URI'] = dbURI
 app.config['SQLALCHEMY_BACKUP_URI'] = backupURI
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False

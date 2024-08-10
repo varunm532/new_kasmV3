@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-""" db_init.py
+""" db_migrate.py
 Generates the database schema for all db models
 - Initializes Users, Sections, and UserSections tables.
 - Imports data from the old database to the new database.
@@ -26,6 +26,8 @@ import shutil
 import sys
 import os
 import requests
+from sqlalchemy import create_engine, text
+from sqlalchemy.exc import OperationalError
 
 # Add the directory containing main.py to the Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -48,7 +50,18 @@ def backup_database(db_uri, backup_uri):
         print(f"Database backed up to {backup_path}")
     else:
         print("Backup not supported for production database.")
-        
+
+# Create the database if it does not exist
+def create_database(engine, db_name):
+    """Create the database if it does not exist."""
+    with engine.connect() as connection:
+        result = connection.execute(text(f"SHOW DATABASES LIKE '{db_name}'"))
+        if not result.fetchone():
+            connection.execute(text(f"CREATE DATABASE {db_name}"))
+            print(f"Database '{db_name}' created successfully.")
+        else:
+            print(f"Database '{db_name}' already exists.")
+
 # Old data access        
 def authenticate(uid, password):
     '''Authenticate and return the token'''
@@ -102,7 +115,21 @@ def main():
                     
             # Backup the old database
             backup_database(app.config['SQLALCHEMY_DATABASE_URI'], app.config['SQLALCHEMY_BACKUP_URI'])
-            
+           
+        except OperationalError as e:
+            if "Unknown database" in str(e):
+                # Create the database if it does not exist
+                engine = create_engine(app.config['SQLALCHEMY_DATABASE_STRING'])
+                create_database(engine, app.config['SQLALCHEMY_DATABASE_NAME'])
+                # Retry the operation
+                with app.app_context():
+                    db.create_all()
+                    print("All tables created after database creation.")
+                    
+            else:
+                print(f"An error occurred: {e}")
+                sys.exit(1) 
+                
         except Exception as e:
             print(f"An error occurred: {e}")
             sys.exit(1)
@@ -122,8 +149,8 @@ def main():
     print("Old data extracted successfully.")
     
     # Step 3: Build New schema and load data 
-    with app.app_context():
-        try:
+    try:
+        with app.app_context():
             # Drop all the tables defined in the project
             db.drop_all()
             print("All tables dropped.")
@@ -144,9 +171,10 @@ def main():
                     print(f"Failed to load data into the new database. Status code: {post_response.status_code}")
                     sys.exit(1)
             
-        except Exception as e:
-            print(f"An error occurred: {e}")
-            sys.exit(1)
+    
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        sys.exit(1)
     
     # Log success 
     print("Database initialized!")
