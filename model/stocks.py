@@ -528,6 +528,9 @@ class UserTransactionStock(db.Model):
             buy_list = []
             sell_list = []
             one_year_list = []
+            one_year_quantity = 0
+            less_one_year_quantity = 0
+            total_sell_quantity = 0
             less_one_year_list = []
             
             for i in s:
@@ -544,8 +547,23 @@ class UserTransactionStock(db.Model):
                 else:
                     less_one_year_list.append(j)
                 print(str(one_year_list))
+        # quantity of stocks made one year ago
+            for k in one_year_list:
+                one_year_quantity += k.quantity
+        # quantity of stock made less than one year ago
+            for l in less_one_year_list:
+                less_one_year_quantity += l.quantity
+        # total quantity of stocks sold
+            for x in sell_list:
+                total_sell_quantity += x.quantity
+            print("this is one_year_quantity" + str( one_year_quantity))
+            print("this is less_one_year_quantity" + str(less_one_year_quantity))
+            print((one_year_quantity - (total_sell_quantity + quantity)) <= 0)
+            if not (one_year_quantity - (total_sell_quantity + quantity)) <= 0:
+                return True
+            else:
+                return False
                     
-                print(str(time))
         except Exception as e:
             return {e}
     def check_stock_quantity(self,body):
