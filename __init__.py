@@ -40,9 +40,7 @@ DB_USERNAME = os.environ.get('DB_USERNAME') or None
 DB_PASSWORD = os.environ.get('DB_PASSWORD') or None
 if DB_ENDPOINT and DB_USERNAME and DB_PASSWORD:
     # Production - Use MySQL
-    app.config['DB_ENDPOINT'] = DB_ENDPOINT
-    app.config['DB_USERNAME'] = DB_USERNAME
-    app.config['DB_PASSWORD'] = DB_PASSWORD
+    
     DB_PORT = '3306'
     DB_NAME = dbName
     dbString = f'mysql+pymysql://{DB_USERNAME}:{DB_PASSWORD}@{DB_ENDPOINT}:{DB_PORT}'
@@ -54,6 +52,9 @@ else:
     dbURI = dbString + dbName + '.db'
     backupURI = dbString + dbName + '_bak.db'
 
+app.config['DB_ENDPOINT'] = DB_ENDPOINT
+app.config['DB_USERNAME'] = DB_USERNAME
+app.config['DB_PASSWORD'] = DB_PASSWORD
 app.config['SQLALCHEMY_DATABASE_NAME'] = dbName
 app.config['SQLALCHEMY_DATABASE_STRING'] = dbString
 app.config['SQLALCHEMY_DATABASE_URI'] = dbURI
