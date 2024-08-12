@@ -40,7 +40,7 @@ AUTH_URL = "https://flask2025.nighthawkcodingsociety.com/api/authenticate"
 DATA_URL = "https://flask2025.nighthawkcodingsociety.com/api/user"
 UID = app.config['DEFAULT_USER'] 
 PASSWORD = app.config['DEFAULT_PASSWORD']
-J
+
 # Backup the old database
 def backup_database(db_uri, backup_uri, db_string):
     """Backup the current database."""
@@ -51,9 +51,9 @@ def backup_database(db_uri, backup_uri, db_string):
         try:
             subprocess.run([
                 'mysqldump',
-                '-h', app.config['DB_ENDPOINT'],
-                '-u', app.config['DB_USERNAME'],
-                f'-p{app.config['DB_PASSWORD']}',
+                '-h', app.config["DB_ENDPOINT"],
+                '-u', app.config["DB_USERNAME"],
+                f'-p{app.config["DB_PASSWORD"]}',
                 db_name,
                 '>', backup_file
             ], check=True, shell=True)
