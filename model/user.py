@@ -335,6 +335,7 @@ class User(db.Model, UserMixin):
             if kasm_server_needed:
                 KasmUser().post(self.name, self.uid, password 
                                 if len(password) > 0 else app.config["DEFAULT_PASSWORD"])
+                KasmUser().post_groups(self.uid, [section.abbreviation for section in self.sections])
 
         try:
             db.session.commit()
