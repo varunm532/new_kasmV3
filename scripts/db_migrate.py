@@ -43,6 +43,9 @@ DATA_URL = "https://flask2025.nighthawkcodingsociety.com/api/user"
 UID = app.config['DEFAULT_USER'] 
 PASSWORD = app.config['DEFAULT_PASSWORD']
 
+PERSISTENCE_PREFIX = "instance"
+JSON_DATA = PERSISTENCE_PREFIX + "/data.json"
+
 # Backup the old database
 def backup_database(db_uri, backup_uri, db_string):
     """Backup the current database."""
@@ -67,8 +70,8 @@ def backup_database(db_uri, backup_uri, db_string):
     elif 'sqlite' in db_string:
         # SQLite backup using shutil
         if backup_uri:
-            db_path = db_uri.replace('sqlite:///', '')
-            backup_path = backup_uri.replace('sqlite:///', '')
+            db_path = db_uri.replace('sqlite:///', PERSISTENCE_PREFIX + '/') 
+            backup_path = backup_uri.replace('sqlite:///', PERSISTENCE_PREFIX + '/') 
             shutil.copyfile(db_path, backup_path)
             print(f"SQLite database backed up to {backup_path}")
         else:
