@@ -329,13 +329,12 @@ class User(db.Model, UserMixin):
             self.kasm_server_needed = bool(kasm_server_needed)
         
             # We need to remove Kasm server in these cases
-            if not kasm_server_needed or old_uid != self.uid:
-                KasmUser().delete(old_uid)
                 
             if kasm_server_needed:
+                if old_uid != self.uid:
+                    KasmUser().delete(old_uid)
                 KasmUser().post(self.name, self.uid, password 
                                 if len(password) > 0 else app.config["DEFAULT_PASSWORD"])
-                KasmUser().post_groups(self.uid, [section.abbreviation for section in self.sections])
 
         try:
             db.session.commit()
@@ -388,6 +387,9 @@ class User(db.Model, UserMixin):
         else:
             # Handle the case where the section exists
             print("Section with abbreviation '{}' exists.".format(section._abbreviation))
+        # update kasm group membership
+        if self.kasm_server_needed:
+            KasmUser().post_groups(self.uid, [section.abbreviation])
         return self
     
     def add_sections(self, sections):

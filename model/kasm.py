@@ -191,7 +191,7 @@ class KasmUtils:
 
             # Prepare the data to be sent in the POST request
             data = {
-                "api_key":API_KEY, # API key for authentication
+                "api_key": API_KEY, # API key for authentication
                 "api_key_secret": API_KEY_SECRET, # API key secret for authentication
                 "target_user": {
                     "user_id": user_id 
@@ -207,6 +207,8 @@ class KasmUtils:
             # Check the status code of the response
             if response.status_code != 200:
                 return None, response  # If the status code is not 200, return None and the response
+            
+            return response, None  # If the status code is 200, return the response and None
 
         # Handle any exceptions that occur during the request
         except requests.RequestException as e:
