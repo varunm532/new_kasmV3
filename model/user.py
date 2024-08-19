@@ -313,28 +313,39 @@ class User(db.Model, UserMixin):
         kasm_server_needed = inputs.get("kasm_server_needed", None)
 
         old_uid = self.uid
-        if len(name) > 0:
+        old_kasm_server_needed = self.kasm_server_needed
+
+        if name:
             self.name = name
-        if len(uid) > 0:
-            self.set_uid(uid) 
-        if len(password) > 0:
+        if uid:
+            self.set_uid(uid)
+        if password:
             self.set_password(password)
-        if pfp is not None: 
+        if pfp is not None:
             self.pfp = pfp
-        
-        # Check this on each update 
+
+        # Check this on each update
         self.set_email()
-        
+
+        # Make a KasmUser object to interact with the Kasm API
+        kasm_user = KasmUser()
+
+        # Update Kasm server group membership if needed
         if kasm_server_needed is not None:
             self.kasm_server_needed = bool(kasm_server_needed)
-        
-            # We need to remove Kasm server in these cases
-                
-            if kasm_server_needed:
+            # User is becoming or updating Kasm server user status
+            if self.kasm_server_needed:
+                # UID has changed, delete old Kasm user if it exists
                 if old_uid != self.uid:
-                    KasmUser().delete(old_uid)
-                KasmUser().post(self.name, self.uid, password 
-                                if len(password) > 0 else app.config["DEFAULT_PASSWORD"])
+                    kasm_user.delete(old_uid)
+                # Create or update the user in Kasm, including a password
+                kasm_user.post(self.name, self.uid, password if password else app.config["DEFAULT_PASSWORD"])
+                # User is transtioning from non-Kasm to Kasm user, thus it requires posting all groups to Kasm
+                if not old_kasm_server_needed:
+                    kasm_user.post_groups(self.uid, [section.abbreviation for section in self.sections])
+            # User is transitioning from Kasm user to non-Kasm user, thus it requires cleanup of defunct Kasm user
+            elif old_kasm_server_needed:
+                kasm_user.delete(self.uid)
 
         try:
             db.session.commit()
