@@ -131,7 +131,10 @@ class StockAPI:
             if avaliable_quantity >= quantity :
                 x=UserTransactionStock.check_tax(self,body)
                 if x == True:
-                    pass
+                    tax_rate = 0.20
+                    UserTransactionStock.calculate_value(self,body,tax_rate)
+                else:
+                    tax_rate = 0.30
                 
             else:
                 return jsonify({'error':'No stock to sell'}), 400

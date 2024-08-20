@@ -526,12 +526,12 @@ class UserTransactionStock(db.Model):
         try:
             s = list(UserTransactionStock.query.filter_by(_stock_id = stockid, _user_id = userid).all())
             buy_list = []
-            sell_list = []
-            one_year_list = []
+            self.sell_list = []
+            self.one_year_list = []
             one_year_quantity = 0
             less_one_year_quantity = 0
-            total_sell_quantity = 0
-            less_one_year_list = []
+            self.total_sell_quantity = 0
+            self.less_one_year_list = []
             
             for i in s:
                 transactionid = i.transaction_id
@@ -539,26 +539,26 @@ class UserTransactionStock(db.Model):
                 if transaction_type == 'buy':
                     buy_list.append(i)
                 else:
-                    sell_list.append(i)
+                    self.sell_list.append(i)
             for j in buy_list:
                 time = j._transaction_time
                 if time <= one_year_ago:
-                    one_year_list.append(j)
+                    self.one_year_list.append(j)
                 else:
-                    less_one_year_list.append(j)
-                print(str(one_year_list))
+                    self.less_one_year_list.append(j)
+                #print(str(one_year_list))
         # quantity of stocks made one year ago
-            for k in one_year_list:
+            for k in self.one_year_list:
                 one_year_quantity += k.quantity
         # quantity of stock made less than one year ago
-            for l in less_one_year_list:
+            for l in self.less_one_year_list:
                 less_one_year_quantity += l.quantity
         # total quantity of stocks sold
-            for x in sell_list:
+            for x in self.sell_list:
                 total_sell_quantity += x.quantity
-            print("this is one_year_quantity" + str( one_year_quantity))
-            print("this is less_one_year_quantity" + str(less_one_year_quantity))
-            print((one_year_quantity - (total_sell_quantity + quantity)) <= 0)
+            #print("this is one_year_quantity" + str( one_year_quantity))
+            #print("this is less_one_year_quantity" + str(less_one_year_quantity))
+            #print((one_year_quantity - (total_sell_quantity + quantity)) <= 0)
             if not (one_year_quantity - (total_sell_quantity + quantity)) <= 0:
                 return True
             else:
@@ -566,6 +566,34 @@ class UserTransactionStock(db.Model):
                     
         except Exception as e:
             return {e}
+        
+    def calculate_value(self,body,tax_rate):
+        uid = body.get("uid")
+        symbol = body.get("symbol")
+        quantity = body.get("quantity")
+        stockid = TableStock.get_stockid(self,symbol)
+        userid = StockUser.get_userid(self,uid)
+        buy_value = 0
+        if tax_rate == 0.2:
+            print("this is list" + str(self.one_year_list))
+            buycounter = 0
+            for i in self.one_year_list:
+                
+                if buycounter >= self.total_sell_quantity:
+                    remainder = buycounter - self.total_sell_quantity
+                    if remainder - quantity > 0:
+                        i.price_per_stock
+                    
+                else:
+                    buycounter += i.quantity
+                    
+                    
+                
+                
+        else: 
+            pass
+               
+        
     def check_stock_quantity(self,body):
         symbol = body.get("symbol")
         uid = body.get("uid")
@@ -582,7 +610,7 @@ class UserTransactionStock(db.Model):
                 transaction_type = StockTransaction.query.filter(StockTransaction.id == transactionid).value(StockTransaction._transaction_type)
                 if transaction_type == 'buy':
                     buy_list.append(i)
-                    print(buy_list)
+                    #print(buy_list)
                     num_buy += i.quantity
                 else:
                     sell_list.append(i)
