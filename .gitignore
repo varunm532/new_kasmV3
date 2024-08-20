@@ -5,6 +5,8 @@ __pycache__/
 
 # Environments
 .env
+.env.*
+.env.swp
 .venv
 env/
 venv/
@@ -14,3 +16,5 @@ venv.bak/
 
 # instance data, databases
 instance/volumes/
+instance/data.json
+instance/data.json.*.bak

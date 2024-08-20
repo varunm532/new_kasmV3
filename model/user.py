@@ -1,15 +1,16 @@
 """ database dependencies to support sqliteDB examples """
 from flask import current_app
 from flask_login import UserMixin
-import os
-import json
 from datetime import date
-from __init__ import app, db
-from model.github import GitHubUser
-from model.kasm import KasmCreateUser, KasmDeleteUser
-from model.stocks import StockUser
 from sqlalchemy.exc import IntegrityError
 from werkzeug.security import generate_password_hash, check_password_hash
+import os
+import json
+
+from __init__ import app, db
+from model.github import GitHubUser
+from model.kasm import KasmUser
+from model.stocks import StockUser
 
 
 """ Helper Functions """
@@ -44,16 +45,17 @@ class UserSection(db.Model):
     section_id = db.Column(db.Integer, db.ForeignKey('sections.id'), primary_key=True)
     year = db.Column(db.Integer)
 
-    # Relationship backrefs
-    user = db.relationship("User", backref=db.backref("user_sections", cascade="all, delete-orphan"))
-    section = db.relationship("Section", backref=db.backref("user_sections", cascade="all, delete-orphan"))
-
+    # Define relationships with User and Section models 
+    user = db.relationship("User", backref=db.backref("user_sections_rel", cascade="all, delete-orphan"))
+    # Overlaps setting avoids cicular dependencies with Section class.
+    section = db.relationship("Section", backref=db.backref("section_users_rel", cascade="all, delete-orphan"), overlaps="users")
+    
     def __init__(self, user, section):
         self.user = user
         self.section = section
         self.year = default_year()
 
-# Define a many-to-many relationship to 'users' table
+
 class Section(db.Model):
     """
     Section Model
@@ -70,6 +72,11 @@ class Section(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     _name = db.Column(db.String(255), unique=False, nullable=False)
     _abbreviation = db.Column(db.String(255), unique=True, nullable=False)
+  
+    # Define many-to-many relationship with User model through UserSection table
+    # Overlaps setting avoids cicular dependencies with UserSection class
+    users = db.relationship('User', secondary=UserSection.__table__, lazy='subquery',
+                            backref=db.backref('section_users_rel', lazy=True, viewonly=True), overlaps="section_users_rel,user_sections_rel,user")    
     
     # Constructor
     def __init__(self, name, abbreviation):
@@ -110,7 +117,6 @@ class Section(db.Model):
         return None
 
 
-# Define a User class that inherits from db.Model and UserMixin
 class User(db.Model, UserMixin):
     """
     User Model
@@ -131,9 +137,8 @@ class User(db.Model, UserMixin):
         kasm_server_needed (Column): A boolean indicating whether the user requires a Kasm server.
         sections (Relationship): A many-to-many relationship between users and sections, allowing users to be associated with multiple sections.
     """
-    __tablename__ = 'users'  # table name is plural, class name is singular
+    __tablename__ = 'users'
 
-    # Define the User schema with "vars" from object
     id = db.Column(db.Integer, primary_key=True)
     _name = db.Column(db.String(255), unique=False, nullable=False)
     _uid = db.Column(db.String(255), unique=True, nullable=False)
@@ -142,14 +147,15 @@ class User(db.Model, UserMixin):
     _role = db.Column(db.String(20), default="User", nullable=False)
     _pfp = db.Column(db.String(255), unique=False, nullable=True)
     kasm_server_needed = db.Column(db.Boolean, default=False)
-    
-    # Relationship to manage the association between users and sections
+   
+    # Define many-to-many relationship with Section model through UserSection table 
+    # Overlaps setting avoids cicular dependencies with UserSection class
     sections = db.relationship('Section', secondary=UserSection.__table__, lazy='subquery',
-                               backref=db.backref('users', lazy=True))
-    stock_user = db.relationship("StockUser", backref=db.backref("users", cascade="all"), lazy=True,uselist=False)
+                               backref=db.backref('user_sections_rel', lazy=True, viewonly=True), overlaps="user_sections_rel,section,section_users_rel,user,users")
+    
+    # Define one-to-one relationship with StockUser model
+    stock_user = db.relationship("StockUser", backref=db.backref("users", cascade="all"), lazy=True, uselist=False)
 
-
-    # Constructor of a User object, initializes the instance variables within object (self)
     def __init__(self, name, uid, password=app.config["DEFAULT_PASSWORD"], kasm_server_needed=False, role="User", pfp=''):
         self._name = name
         self._uid = uid
@@ -307,24 +313,39 @@ class User(db.Model, UserMixin):
         kasm_server_needed = inputs.get("kasm_server_needed", None)
 
         old_uid = self.uid
-        if len(name) > 0:
+        old_kasm_server_needed = self.kasm_server_needed
+
+        if name:
             self.name = name
-        if len(uid) > 0:
-            self.set_uid(uid) 
-        if len(password) > 0:
+        if uid:
+            self.set_uid(uid)
+        if password:
             self.set_password(password)
-        if pfp is not None: 
+        if pfp is not None:
             self.pfp = pfp
+
+        # Check this on each update
+        self.set_email()
+
+        # Make a KasmUser object to interact with the Kasm API
+        kasm_user = KasmUser()
+
+        # Update Kasm server group membership if needed
         if kasm_server_needed is not None:
             self.kasm_server_needed = bool(kasm_server_needed)
-
-        # Check this on each update 
-        self.set_email()
-        # We need to remove old Kasm user if uid changes
-        if old_uid != self.uid:
-            KasmDeleteUser().post(old_uid)
-        KasmCreateUser().post(self.name, self.uid, password 
-                                        if len(password) > 0 else app.config["DEFAULT_PASSWORD"])
+            # User is becoming or updating Kasm server user status
+            if self.kasm_server_needed:
+                # UID has changed, delete old Kasm user if it exists
+                if old_uid != self.uid:
+                    kasm_user.delete(old_uid)
+                # Create or update the user in Kasm, including a password
+                kasm_user.post(self.name, self.uid, password if password else app.config["DEFAULT_PASSWORD"])
+                # User is transtioning from non-Kasm to Kasm user, thus it requires posting all groups to Kasm
+                if not old_kasm_server_needed:
+                    kasm_user.post_groups(self.uid, [section.abbreviation for section in self.sections])
+            # User is transitioning from Kasm user to non-Kasm user, thus it requires cleanup of defunct Kasm user
+            elif old_kasm_server_needed:
+                kasm_user.delete(self.uid)
 
         try:
             db.session.commit()
@@ -337,7 +358,7 @@ class User(db.Model, UserMixin):
     # None
     def delete(self):
         try:
-            KasmDeleteUser().post(self.uid)
+            KasmUser().delete(self.uid)
             db.session.delete(self)
             db.session.commit()
         except IntegrityError:
@@ -377,6 +398,9 @@ class User(db.Model, UserMixin):
         else:
             # Handle the case where the section exists
             print("Section with abbreviation '{}' exists.".format(section._abbreviation))
+        # update kasm group membership
+        if self.kasm_server_needed:
+            KasmUser().post_groups(self.uid, [section.abbreviation])
         return self
     
     def add_sections(self, sections):
@@ -401,9 +425,9 @@ class User(db.Model, UserMixin):
     def read_sections(self):
         """Reads the sections associated with the user."""
         sections = []
-        # The user_sections backref provides access to the many-to-many relationship data 
-        if self.user_sections:
-            for user_section in self.user_sections:
+        # The user_sections_rel backref provides access to the many-to-many relationship data 
+        if self.user_sections_rel:
+            for user_section in self.user_sections_rel:
                 # This user_section backref "row" can be used to access section methods 
                 section_data = user_section.section.read()
                 # Extract the year from the relationship data  
@@ -421,9 +445,9 @@ class User(db.Model, UserMixin):
         abbreviation = section_data.get("abbreviation", None)
         year = int(section_data.get("year", default_year()))  # Convert year to integer, default to 0 if not found
 
-        # Find the user_section that matches the provided abbreviation
+        # Find the user_section that matches the provided abbreviation through the user_sections_rel backref
         section = next(
-            (s for s in self.user_sections if s.section.abbreviation == abbreviation),
+            (s for s in self.user_sections_rel if s.section.abbreviation == abbreviation),
             None
         )
 
@@ -514,9 +538,9 @@ def initUsers():
         db.create_all()
         """Tester data for table"""
         
-        u1 = User(name='Thomas Edison', uid='toby', password='123toby', pfp='toby.png', kasm_server_needed=True, role="Admin")
-        u2 = User(name='Nicholas Tesla', uid='niko', password='123niko', pfp='niko.png', kasm_server_needed=False)
-        u3 = User(name='Grace Hopper', uid='hop', password='123hop', pfp='hop.png', kasm_server_needed=False)
+        u1 = User(name='Thomas Edison', uid=app.config['ADMIN_USER'], password=app.config['ADMIN_PASSWORD'], pfp='toby.png', kasm_server_needed=True, role="Admin")
+        u2 = User(name='Grace Hopper', uid=app.config['DEFAULT_USER'], password=app.config['DEFAULT_PASSWORD'], pfp='hop.png', kasm_server_needed=False)
+        u3 = User(name='Nicholas Tesla', uid='niko', password='123niko', pfp='niko.png', kasm_server_needed=False)
         users = [u1, u2, u3]
         
         for user in users:
