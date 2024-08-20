@@ -573,7 +573,6 @@ class UserTransactionStock(db.Model):
         quantity = body.get("quantity")
         stockid = TableStock.get_stockid(self,symbol)
         userid = StockUser.get_userid(self,uid)
-        buy_value = 0
         if tax_rate == 0.2:
             print("this is list" + str(self.one_year_list))
             buycounter = 0
@@ -582,8 +581,15 @@ class UserTransactionStock(db.Model):
                 if buycounter >= self.total_sell_quantity:
                     remainder = buycounter - self.total_sell_quantity
                     if remainder - quantity > 0:
-                        i.price_per_stock
-                    
+                        old_value = i.price_per_stock *(remainder - quantity)
+                        profit = (TableStock.get_price(self,body) * quantity) - old_value
+                        print("this is profit:" + str(profit))
+                        if profit > 0:
+                            return ((TableStock.get_price(self,body)* quantity) - (profit *0.2))
+                        else:
+                            return(TableStock.get_price(self,body)* quantity)   
+                    else:
+                                         
                 else:
                     buycounter += i.quantity
                     
