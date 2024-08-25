@@ -374,6 +374,7 @@ class UserTransactionStock(db.Model):
     _price_per_stock = db.Column(db.Float, nullable=False)
     _transaction_amount = db.Column(db.Integer, nullable=False)
     _transaction_time = db.Column(db.DateTime, nullable=False, default=db.func.current_timestamp())
+    _tax_deduction_amount = db.Column(db.Integer, default = 0)
 
     stock = db.relationship(
         "TableStock",
@@ -555,11 +556,11 @@ class UserTransactionStock(db.Model):
                 less_one_year_quantity += l.quantity
         # total quantity of stocks sold
             for x in self.sell_list:
-                total_sell_quantity += x.quantity
+                self.total_sell_quantity += x.quantity
             #print("this is one_year_quantity" + str( one_year_quantity))
             #print("this is less_one_year_quantity" + str(less_one_year_quantity))
             #print((one_year_quantity - (total_sell_quantity + quantity)) <= 0)
-            if not (one_year_quantity - (total_sell_quantity + quantity)) <= 0:
+            if not (one_year_quantity - (self.total_sell_quantity + quantity)) <= 0:
                 return True
             else:
                 return False
@@ -567,7 +568,7 @@ class UserTransactionStock(db.Model):
         except Exception as e:
             return {e}
         
-    def calculate_value(self,body,tax_rate):
+    def calculate_tax_value(self,body,tax_rate):
         uid = body.get("uid")
         symbol = body.get("symbol")
         quantity = body.get("quantity")
@@ -576,20 +577,22 @@ class UserTransactionStock(db.Model):
         if tax_rate == 0.2:
             print("this is list" + str(self.one_year_list))
             buycounter = 0
-            for i in self.one_year_list:
-                
+            for i  in self.one_year_list:
+                if buycounter ==0:
+                    buycounter += i.quantity
                 if buycounter >= self.total_sell_quantity:
                     remainder = buycounter - self.total_sell_quantity
                     if remainder - quantity > 0:
-                        old_value = i.price_per_stock *(remainder - quantity)
-                        profit = (TableStock.get_price(self,body) * quantity) - old_value
+                        old_value = i.price_per_stock *(quantity)
+                        new_value = TableStock.get_price(self,body) * quantity
+                        profit = (new_value) - old_value
                         print("this is profit:" + str(profit))
                         if profit > 0:
-                            return ((TableStock.get_price(self,body)* quantity) - (profit *0.2))
+                            return ((profit *0.2))
                         else:
-                            return(TableStock.get_price(self,body)* quantity)   
+                            return(0)   
                     else:
-                                         
+                        return("z")
                 else:
                     buycounter += i.quantity
                     
